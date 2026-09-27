@@ -208,6 +208,9 @@ export default function CommentsScreen() {
     }
   };
 
+  const openCar = (carId: string | null) =>
+    carId && router.push({ pathname: '/garage/[carId]', params: { carId } });
+
   const openProfile = (userId: string, name: string) =>
     router.push({ pathname: '/user/[userId]', params: { userId, name } });
 
@@ -249,7 +252,17 @@ export default function CommentsScreen() {
               )}
               {post.car || post.authorId !== user?.id ? (
               <View style={styles.carRow}>
-                <Text style={styles.car}>{post.car}</Text>
+                <Text
+                  style={styles.car}
+                  onPress={
+                    post.carId
+                      ? () => openCar(post.carId)
+                      : undefined
+                  }
+                  accessibilityRole={post.carId ? 'link' : undefined}>
+                  {post.car}
+                  {post.carId ? ' ›' : ''}
+                </Text>
                 {post.authorId !== user?.id ? (
                   <Pressable
                     onPress={openPostMenu}

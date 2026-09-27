@@ -11,17 +11,14 @@ import { type Car, carTitle, fetchCars } from '@/lib/cars';
 function CarCard({ car, editable }: { car: Car; editable: boolean }) {
   const router = useRouter();
   const edit = () => router.push({ pathname: '/garage/edit', params: { carId: car.id } });
+  const open = () => router.push({ pathname: '/garage/[carId]', params: { carId: car.id } });
 
   return (
     <View style={styles.card}>
       {car.photoUri ? (
-        <Image
-          source={{ uri: car.photoUri }}
-          style={styles.photo}
-          contentFit="cover"
-          transition={150}
-          accessibilityLabel={`Photo of ${carTitle(car)}`}
-        />
+        <Pressable onPress={open} accessibilityRole="link" accessibilityLabel={`Open ${carTitle(car)}`}>
+          <Image source={{ uri: car.photoUri }} style={styles.photo} contentFit="cover" transition={150} />
+        </Pressable>
       ) : (
         <Pressable
           onPress={editable ? edit : undefined}
@@ -36,12 +33,12 @@ function CarCard({ car, editable }: { car: Car; editable: boolean }) {
 
       <View style={styles.info}>
         <View style={styles.titleRow}>
-          <View style={styles.titleText}>
+          <Pressable onPress={open} accessibilityRole="link" style={styles.titleText}>
             <Text style={styles.title}>{carTitle(car)}</Text>
             {car.nickname && carTitle(car) !== car.nickname ? (
               <Text style={styles.nickname}>“{car.nickname}”</Text>
             ) : null}
-          </View>
+          </Pressable>
           {editable ? (
             <Pressable
               onPress={edit}

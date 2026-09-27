@@ -1,15 +1,17 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CarDetailsInput } from '@/components/CarDetailsInput';
+import { Chip } from '@/components/Chip';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { PostVideo } from '@/components/PostVideo';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
+import { type Car, carTitle, fetchCars } from '@/lib/cars';
 import { showError } from '@/lib/confirm';
 import { useTabBarSpace } from '@/lib/layout';
 import { type PickedMedia, pickPostMedia } from '@/lib/media';
@@ -20,7 +22,10 @@ const EMPTY_CAR: CarDetails = { year: '', make: '', model: '' };
 const CAPTION_MAX = 2200;
 
 export default function PostScreen() {
-  const { addPost } = useGarage();
+  const { addPost, user } = useGarage();
+  const userId = user?.id;
+  const [myCars, setMyCars] = useState<Car[]>([]);
+  const [carId, setCarId] = useState<string | null>(null);
   const router = useRouter();
   const [media, setMedia] = useState<PickedMedia | null>(null);
   const [preparing, setPreparing] = useState(false);
@@ -29,6 +34,29 @@ export default function PostScreen() {
   const [busy, setBusy] = useState(false);
   const tabBarSpace = useTabBarSpace();
   const canShare = !!media && !busy && !preparing;
+
+  // Your garage, reloaded each visit so a car added a moment ago can be tagged.
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      let cancelled = false;
+      fetchCars(userId)
+        .then((cars) => !cancelled && setMyCars(cars))
+        .catch((error) => console.warn('Failed to load your garage', error));
+      return () => {
+        cancelled = true;
+      };
+    }, [userId])
+  );
+
+  const tagCar = (tagged: Car) => {
+    if (carId === tagged.id) {
+      setCarId(null);
+      return;
+    }
+    setCarId(tagged.id);
+    setCar({ year: tagged.year, make: tagged.make, model: tagged.model });
+  };
   const isVideo = media?.kind === 'video';
 
   const pick = async () => {
@@ -47,9 +75,10 @@ export default function PostScreen() {
     if (!media) return;
     setBusy(true);
     try {
-      await addPost({ media, caption, car: formatCar(car) });
+      await addPost({ media, caption, car: formatCar(car), carId });
       setMedia(null);
       setCar(EMPTY_CAR);
+      setCarId(null);
       setCaption('');
       router.replace('/');
     } catch (error) {
@@ -110,7 +139,29 @@ export default function PostScreen() {
             </View>
           )}
         </Pressable>
-        <CarDetailsInput value={car} onChange={setCar} />
+        {myCars.length > 0 ? (
+          <View style={styles.tagBlock}>
+            <Text style={styles.tagLabel}>Tag a car from your garage</Text>
+            <View style={styles.tagChips}>
+              {myCars.map((mine) => (
+                <Chip
+                  key={mine.id}
+                  label={mine.nickname || carTitle(mine)}
+                  icon="car-sport-outline"
+                  active={carId === mine.id}
+                  onPress={() => tagCar(mine)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+        <CarDetailsInput
+          value={car}
+          onChange={(details) => {
+            setCar(details);
+            setCarId(null); // typed a different car: drop the garage tag
+          }}
+        />
         <TextInput
           value={caption}
           onChangeText={setCaption}
@@ -228,6 +279,18 @@ const styles = StyleSheet.create({
   preview: {
     width: '100%',
     aspectRatio: 4 / 5,
+  },
+  tagBlock: {
+    gap: 8,
+  },
+  tagLabel: {
+    color: Colors.light.text,
+    fontWeight: '800',
+  },
+  tagChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   input: {
     ...glass,

@@ -7,17 +7,17 @@ import {
   BUCKET,
   fetchFeedPage,
   fetchSaved,
+  POST_SELECT,
   toPost,
   type FeedMode,
   type FeedPage,
   type PostRow,
   VIDEO_BUCKET,
-  withPostSelect,
 } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import type { Post, User } from '@/types';
 
-type NewPost = { media: PickedMedia; caption: string; car: string };
+type NewPost = { media: PickedMedia; caption: string; car: string; carId?: string | null };
 
 /** Storage says "Bucket not found" until the media-safety migration has created it. */
 function videoUploadError(error: Error): Error {
@@ -200,10 +200,9 @@ export function GarageProvider({ children }: { children: ReactNode }) {
           car: input.car.trim(),
           caption: input.caption.trim(),
           ...(videoPath ? { video_path: videoPath } : {}),
+          ...(input.carId ? { car_id: input.carId } : {}),
         };
-        const { data, error } = await withPostSelect((select) =>
-          supabase.from('posts').insert(row).select(select).single()
-        );
+        const { data, error } = await supabase.from('posts').insert(row).select(POST_SELECT).single();
         if (error) throw error;
 
         const post = toPost(data as unknown as PostRow);

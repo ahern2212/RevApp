@@ -101,6 +101,9 @@ export default function FeedScreen() {
     setActiveVideoId(video ? video.item.id : null);
   }, []);
 
+  const openCar = (carId: string | null) =>
+    carId && router.push({ pathname: '/garage/[carId]', params: { carId } });
+
   const openProfile = (post: Post) =>
     router.push({
       pathname: '/user/[userId]',
@@ -238,6 +241,11 @@ export default function FeedScreen() {
             onAuthorPress={() => openProfile(item)}
             onLikesPress={() =>
               router.push({ pathname: '/likes/[postId]', params: { postId: item.id } })
+            }
+            onCarPress={
+              item.carId
+                ? () => openCar(item.carId)
+                : undefined
             }
             onOptions={() => setOptionsFor(item)}
           />

@@ -35,6 +35,8 @@ type Props = {
   onShare: () => void;
   onAuthorPress: () => void;
   onLikesPress: () => void;
+  /** Opens the tagged garage car's page (only for posts with a tagged car). */
+  onCarPress?: () => void;
   /** Opens the "…" menu (edit/delete on your own posts, report/block on others'). */
   onOptions?: () => void;
 };
@@ -50,6 +52,7 @@ export function PostCard({
   onShare,
   onAuthorPress,
   onLikesPress,
+  onCarPress,
   onOptions,
 }: Props) {
   const heartScale = useSharedValue(1);
@@ -122,7 +125,14 @@ export function PostCard({
           <View style={styles.authorText}>
             <Text style={styles.username}>{post.authorName}</Text>
             <Text style={styles.meta} numberOfLines={1}>
-              {post.car ? `${post.car} · ` : ''}
+              {post.car && onCarPress ? (
+                <Text style={styles.carLink} onPress={onCarPress} accessibilityRole="link">
+                  {post.car}
+                </Text>
+              ) : (
+                post.car
+              )}
+              {post.car ? ' · ' : ''}
               {timeAgo(post.createdAt)}
             </Text>
           </View>
@@ -278,6 +288,10 @@ const styles = StyleSheet.create({
     color: Colors.light.muted,
     fontSize: 12,
     marginTop: 2,
+  },
+  carLink: {
+    color: Colors.light.tint,
+    fontWeight: '700',
   },
   photo: {
     width: '100%',

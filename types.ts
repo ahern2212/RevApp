@@ -12,6 +12,8 @@ export type Post = {
   imageUri: string;
   videoPath: string | null;
   videoUri: string | null;
+  /** The garage car tagged in this post, if any. */
+  carId: string | null;
   caption: string;
   car: string;
   createdAt: number;
