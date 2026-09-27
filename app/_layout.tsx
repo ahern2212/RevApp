@@ -73,6 +73,10 @@ function RootLayoutNav() {
     <ThemeProvider value={navTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="comments/[postId]"
+          options={{ presentation: 'modal', title: 'Comments', headerTitleStyle: { fontWeight: '800' } }}
+        />
       </Stack>
     </ThemeProvider>
   );

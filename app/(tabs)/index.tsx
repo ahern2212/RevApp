@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { FlatList, StyleSheet, Text } from 'react-native';
 
 import { PostCard } from '@/components/PostCard';
@@ -6,6 +7,7 @@ import { useGarage } from '@/context/GarageContext';
 
 export default function FeedScreen() {
   const { posts, user, toggleLike, refreshing, refresh } = useGarage();
+  const router = useRouter();
 
   return (
     <FlatList
@@ -16,6 +18,9 @@ export default function FeedScreen() {
           post={item}
           liked={!!user && item.likedBy.includes(user.id)}
           onLike={() => toggleLike(item.id)}
+          onComment={() =>
+            router.push({ pathname: '/comments/[postId]', params: { postId: item.id } })
+          }
         />
       )}
       refreshing={refreshing}

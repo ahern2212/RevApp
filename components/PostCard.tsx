@@ -1,25 +1,36 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import Colors from '@/constants/Colors';
+import { timeAgo } from '@/lib/time';
 import type { Post } from '@/types';
 
 type Props = {
   post: Post;
   liked: boolean;
   onLike: () => void;
+  onComment: () => void;
 };
 
-function timeAgo(timestamp: number) {
-  const mins = Math.max(1, Math.round((Date.now() - timestamp) / 60000));
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.round(hours / 24)}d`;
-}
+export function PostCard({ post, liked, onLike, onComment }: Props) {
+  const heartScale = useSharedValue(1);
+  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: heartScale.get() }] }));
 
-export function PostCard({ post, liked, onLike }: Props) {
+  const handleLike = () => {
+    if (!liked) {
+      heartScale.set(withSequence(withTiming(1.3, { duration: 120 }), withSpring(1)));
+    }
+    onLike();
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -35,15 +46,32 @@ export function PostCard({ post, liked, onLike }: Props) {
       </View>
       <Image source={{ uri: post.imageUri }} style={styles.photo} contentFit="cover" />
       <View style={styles.actions}>
-        <Pressable onPress={onLike} hitSlop={8} style={styles.likeButton}>
-          <SymbolView
-            name={{ ios: liked ? 'heart.fill' : 'heart', android: 'favorite', web: 'favorite' }}
-            tintColor={liked ? Colors.light.tint : Colors.light.text}
-            size={26}
-          />
-          <Text style={[styles.likeCount, liked && { color: Colors.light.tint }]}>
+        <Pressable
+          onPress={handleLike}
+          hitSlop={8}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel={liked ? 'Unlike' : 'Like'}
+          accessibilityState={{ selected: liked }}>
+          <Animated.View style={heartStyle}>
+            <Ionicons
+              name={liked ? 'heart' : 'heart-outline'}
+              color={liked ? Colors.light.tint : Colors.light.text}
+              size={26}
+            />
+          </Animated.View>
+          <Text style={[styles.count, liked && { color: Colors.light.tint }]}>
             {post.likedBy.length}
           </Text>
+        </Pressable>
+        <Pressable
+          onPress={onComment}
+          hitSlop={8}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel={`Comments, ${post.commentCount}`}>
+          <Ionicons name="car-sport-outline" color={Colors.light.text} size={28} />
+          <Text style={styles.count}>{post.commentCount}</Text>
         </Pressable>
       </View>
       {post.caption ? (
@@ -51,6 +79,13 @@ export function PostCard({ post, liked, onLike }: Props) {
           <Text style={styles.username}>{post.authorName} </Text>
           {post.caption}
         </Text>
+      ) : null}
+      {post.commentCount > 0 ? (
+        <Pressable onPress={onComment} accessibilityRole="button">
+          <Text style={styles.viewComments}>
+            View {post.commentCount === 1 ? '1 comment' : `all ${post.commentCount} comments`}
+          </Text>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -98,15 +133,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.imagePlaceholder,
   },
   actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
     paddingHorizontal: 14,
     paddingTop: 10,
   },
-  likeButton: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  likeCount: {
+  count: {
     color: Colors.light.text,
     fontWeight: '600',
   },
@@ -115,5 +153,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 8,
     lineHeight: 20,
+  },
+  viewComments: {
+    color: Colors.light.muted,
+    paddingHorizontal: 14,
+    paddingTop: 6,
   },
 });

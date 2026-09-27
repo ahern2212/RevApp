@@ -12,4 +12,5 @@ export type Post = {
   car: string;
   createdAt: number;
   likedBy: string[];
+  commentCount: number;
 };

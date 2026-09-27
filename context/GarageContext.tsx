@@ -9,7 +9,7 @@ const FEED_LIMIT = 100;
 
 // posts → profiles has two paths (author_id and via likes), so name the FK explicitly.
 const POST_SELECT =
-  'id, author_id, image_path, car, caption, created_at, author:profiles!posts_author_id_fkey(username), likes(user_id)';
+  'id, author_id, image_path, car, caption, created_at, author:profiles!posts_author_id_fkey(username), likes(user_id), comments(count)';
 
 type PostRow = {
   id: string;
@@ -20,6 +20,7 @@ type PostRow = {
   created_at: string;
   author: { username: string } | null;
   likes: { user_id: string }[];
+  comments: { count: number }[];
 };
 
 type NewPost = { imageUri: string; mimeType?: string; caption: string; car: string };
@@ -33,6 +34,7 @@ type GarageContextValue = {
   signOut: () => Promise<void>;
   addPost: (input: NewPost) => Promise<void>;
   toggleLike: (postId: string) => Promise<void>;
+  adjustCommentCount: (postId: string, delta: number) => void;
 };
 
 const GarageContext = createContext<GarageContextValue | null>(null);
@@ -47,6 +49,7 @@ function toPost(row: PostRow): Post {
     car: row.car,
     createdAt: Date.parse(row.created_at),
     likedBy: row.likes.map((like) => like.user_id),
+    commentCount: row.comments[0]?.count ?? 0,
   };
 }
 
@@ -146,6 +149,17 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     [posts, userId]
   );
 
+  // Keeps the feed's comment count in sync after commenting on the comments screen.
+  const adjustCommentCount = useCallback((postId: string, delta: number) => {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === postId
+          ? { ...post, commentCount: Math.max(0, post.commentCount + delta) }
+          : post
+      )
+    );
+  }, []);
+
   const value = useMemo(
     () => ({
       ready: !isLoading,
@@ -156,8 +170,9 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       signOut,
       addPost,
       toggleLike,
+      adjustCommentCount,
     }),
-    [isLoading, user, posts, refreshing, refresh, signOut, addPost, toggleLike]
+    [isLoading, user, posts, refreshing, refresh, signOut, addPost, toggleLike, adjustCommentCount]
   );
 
   return <GarageContext.Provider value={value}>{children}</GarageContext.Provider>;

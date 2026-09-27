@@ -2,17 +2,21 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 
+import { CarDetailsInput } from '@/components/CarDetailsInput';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
+import { type CarDetails, formatCar } from '@/lib/vehicles';
+
+const EMPTY_CAR: CarDetails = { year: '', make: '', model: '' };
 
 export default function PostScreen() {
   const { addPost } = useGarage();
   const router = useRouter();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [mimeType, setMimeType] = useState<string | undefined>();
-  const [car, setCar] = useState('');
+  const [car, setCar] = useState<CarDetails>(EMPTY_CAR);
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -34,10 +38,10 @@ export default function PostScreen() {
     }
     setBusy(true);
     try {
-      await addPost({ imageUri, mimeType, caption, car });
+      await addPost({ imageUri, mimeType, caption, car: formatCar(car) });
       setImageUri(null);
       setMimeType(undefined);
-      setCar('');
+      setCar(EMPTY_CAR);
       setCaption('');
       router.replace('/');
     } catch (error) {
@@ -48,7 +52,10 @@ export default function PostScreen() {
   };
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.wrap}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled">
       <Pressable onPress={pickImage} style={styles.picker}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.preview} contentFit="cover" />
@@ -56,14 +63,7 @@ export default function PostScreen() {
           <Text style={styles.pickerText}>Tap to choose a car photo</Text>
         )}
       </Pressable>
-      <TextInput
-        value={car}
-        onChangeText={setCar}
-        placeholder="Car (e.g. 2018 Civic Type R)"
-        maxLength={80}
-        placeholderTextColor={Colors.light.placeholder}
-        style={styles.input}
-      />
+      <CarDetailsInput value={car} onChange={setCar} />
       <TextInput
         value={caption}
         onChangeText={setCaption}
