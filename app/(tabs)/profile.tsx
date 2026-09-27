@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { FollowStats } from '@/components/FollowStats';
 import { GarageSection } from '@/components/GarageSection';
 import { PostGrid } from '@/components/PostGrid';
 import Colors from '@/constants/Colors';
@@ -13,6 +14,7 @@ import { THEMES } from '@/constants/themes';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
 import { confirm } from '@/lib/confirm';
+import { fetchFollowCounts, type FollowCounts, type FollowList } from '@/lib/follows';
 import { useTabBarSpace } from '@/lib/layout';
 import { fetchUserPosts } from '@/lib/posts';
 import type { Post } from '@/types';
@@ -31,6 +33,7 @@ export default function ProfileScreen() {
   const profile = useProfile(user?.id);
   const [section, setSection] = useState<Section>('posts');
   const [mine, setMine] = useState<Post[] | null>(null);
+  const [counts, setCounts] = useState<FollowCounts | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const userId = user?.id;
 
@@ -38,6 +41,9 @@ export default function ProfileScreen() {
   // so new posts, deletes and like counts are current.
   const loadMine = useCallback(async () => {
     if (!userId) return;
+    fetchFollowCounts(userId)
+      .then(setCounts)
+      .catch((error) => console.warn('Failed to load follow counts', error));
     try {
       setMine(await fetchUserPosts(userId));
     } catch (error) {
@@ -83,6 +89,17 @@ export default function ProfileScreen() {
             {myPosts.length} {myPosts.length === 1 ? 'post' : 'posts'} · {likes} likes ·{' '}
             {saved.length} saved
           </Text>
+          {counts && userId ? (
+            <FollowStats
+              counts={counts}
+              onOpen={(list: FollowList) =>
+                router.push({
+                  pathname: '/follows/[userId]',
+                  params: { userId, name: user?.username ?? '', list },
+                })
+              }
+            />
+          ) : null}
         </View>
       </View>
       {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}

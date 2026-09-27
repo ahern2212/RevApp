@@ -73,7 +73,7 @@ export default function ActivityScreen() {
             <Ionicons name="heart-outline" size={40} color={Colors.light.tint} />
             <Text style={styles.emptyTitle}>No activity yet</Text>
             <Text style={styles.emptyText}>
-              When someone likes or comments on your posts, you’ll see it here.
+              When someone follows you, or likes or comments on your posts, you’ll see it here.
             </Text>
           </View>
         )
@@ -81,7 +81,12 @@ export default function ActivityScreen() {
       renderItem={({ item }) => (
         <Pressable
           onPress={() =>
-            router.push({ pathname: '/comments/[postId]', params: { postId: item.postId } })
+            item.postId
+              ? router.push({ pathname: '/comments/[postId]', params: { postId: item.postId } })
+              : router.push({
+                  pathname: '/user/[userId]',
+                  params: { userId: item.actorId, name: item.actorName },
+                })
           }
           accessibilityRole="button"
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -99,7 +104,7 @@ export default function ActivityScreen() {
             <Avatar name={item.actorName} userId={item.actorId} size={44} />
             <View style={styles.kind}>
               <Ionicons
-                name={item.type === 'like' ? 'heart' : 'car-sport'}
+                name={item.type === 'like' ? 'heart' : item.type === 'follow' ? 'person-add' : 'car-sport'}
                 size={11}
                 color={Colors.light.onTint}
               />

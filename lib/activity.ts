@@ -11,8 +11,8 @@ const ACTIVITY_SELECT =
 
 type ActivityRow = {
   id: string;
-  type: 'like' | 'comment';
-  post_id: string;
+  type: ActivityType;
+  post_id: string | null;
   actor_id: string;
   created_at: string;
   actor: { username: string } | null;
@@ -20,10 +20,13 @@ type ActivityRow = {
   post: { image_path: string } | null;
 };
 
+export type ActivityType = 'like' | 'comment' | 'follow';
+
 export type Activity = {
   id: string;
-  type: 'like' | 'comment';
-  postId: string;
+  type: ActivityType;
+  /** null for follows. */
+  postId: string | null;
   actorId: string;
   actorName: string;
   commentBody: string | null;
@@ -46,9 +49,10 @@ function toActivity(row: ActivityRow): Activity {
   };
 }
 
-/** "maya liked your post" / "kai commented: "clean build"" */
+/** "maya liked your post" / "kai commented: "clean build"" / "jo started following you" */
 export function describeActivity(activity: Activity): string {
   if (activity.type === 'like') return `${activity.actorName} liked your post`;
+  if (activity.type === 'follow') return `${activity.actorName} started following you`;
   const body = activity.commentBody ?? '';
   const preview = body.length > PREVIEW_LENGTH ? `${body.slice(0, PREVIEW_LENGTH)}…` : body;
   return preview

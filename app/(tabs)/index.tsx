@@ -21,10 +21,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Chip } from '@/components/Chip';
 import { FeedHeader, useFeedHeaderHeight } from '@/components/FeedHeader';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
-import { OptionsSheet } from '@/components/OptionsSheet';
+import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostCard } from '@/components/PostCard';
+import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
@@ -52,14 +54,28 @@ export default function FeedScreen() {
     hasMore,
     loadingMore,
     loadMore,
+    forgetPosts,
+    feedMode,
+    setFeedMode,
+    followingUnavailable,
   } = useGarage();
   const router = useRouter();
   const { top } = useSafeAreaInsets();
   const headerHeight = useFeedHeaderHeight();
   const tabBarSpace = useTabBarSpace();
-  const newPosts = useNewPostsCount(posts[0]?.createdAt ?? null);
+  // The "new posts" pill counts everyone's posts, so it only shows on the Everyone feed.
+  const newPosts = useNewPostsCount(feedMode === 'all' ? (posts[0]?.createdAt ?? null) : null);
   const [optionsFor, setOptionsFor] = useState<Post | null>(null);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const { openReport, reportSheet } = useReportSheet((target) =>
+    forgetPosts((post) => post.id === target.id)
+  );
+
+  const block = async (post: Post) => {
+    if (await confirmBlock(post.authorId, post.authorName)) {
+      forgetPosts((p) => p.authorId === post.authorId);
+    }
+  };
 
   // The first video that's mostly on screen plays; everything else shows its poster.
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken<Post>[] }) => {
@@ -89,6 +105,34 @@ export default function FeedScreen() {
       showError('Could not delete', error);
     }
   };
+
+  // "…" menu: edit/delete on your own posts, report/block on everyone else's.
+  const menuFor = (post: Post): SheetOption[] =>
+    post.authorId === user?.id
+      ? [
+          {
+            label: 'Edit caption',
+            icon: 'create-outline',
+            onPress: () => router.push({ pathname: '/edit-post/[postId]', params: { postId: post.id } }),
+          },
+          { label: 'Share', icon: 'paper-plane-outline', onPress: () => share(post) },
+          { label: 'Delete post', icon: 'trash-outline', destructive: true, onPress: () => remove(post) },
+        ]
+      : [
+          { label: 'Share', icon: 'paper-plane-outline', onPress: () => share(post) },
+          {
+            label: 'Report post',
+            icon: 'flag-outline',
+            destructive: true,
+            onPress: () => openReport({ kind: 'post', id: post.id }),
+          },
+          {
+            label: `Block @${post.authorName}`,
+            icon: 'ban-outline',
+            destructive: true,
+            onPress: () => block(post),
+          },
+        ];
 
   // On iOS the list is pushed below the header with contentInset (so pull-to-refresh
   // shows under the header), which makes scroll offsets start at -headerHeight.
@@ -177,7 +221,7 @@ export default function FeedScreen() {
             onLikesPress={() =>
               router.push({ pathname: '/likes/[postId]', params: { postId: item.id } })
             }
-            onOptions={item.authorId === user?.id ? () => setOptionsFor(item) : undefined}
+            onOptions={() => setOptionsFor(item)}
           />
         )}
         onScroll={onScroll}
@@ -193,14 +237,38 @@ export default function FeedScreen() {
         scrollIndicatorInsets={isIOS ? { top: headerHeight } : undefined}
         onEndReached={loadMore}
         onEndReachedThreshold={0.6}
+        ListHeaderComponent={
+          <View style={styles.modes} accessibilityRole="tablist">
+            <Chip label="Everyone" icon="globe-outline" active={feedMode === 'all'} onPress={() => setFeedMode('all')} />
+            <Chip
+              label="Following"
+              icon="people-outline"
+              active={feedMode === 'following'}
+              onPress={() => setFeedMode('following')}
+            />
+          </View>
+        }
         ListEmptyComponent={
           loadingPosts ? (
             <ActivityIndicator color={Colors.light.tint} style={styles.loading} />
+          ) : followingUnavailable ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.empty}>The Following feed needs the latest database update.</Text>
+            </View>
           ) : feedError ? (
             <View style={styles.emptyBox}>
               <Text style={styles.empty}>Couldn’t load the feed. Check your connection.</Text>
               <Text style={styles.retry} onPress={refresh} accessibilityRole="button">
                 Try again
+              </Text>
+            </View>
+          ) : feedMode === 'following' ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.empty}>
+                Follow drivers to see their builds here. Find people with search, or tap a username in the feed.
+              </Text>
+              <Text style={styles.cta} onPress={() => router.push('/search')} accessibilityRole="button">
+                Find drivers
               </Text>
             </View>
           ) : (
@@ -255,29 +323,9 @@ export default function FeedScreen() {
       <OptionsSheet
         visible={optionsFor !== null}
         onClose={() => setOptionsFor(null)}
-        options={
-          optionsFor
-            ? [
-                {
-                  label: 'Edit caption',
-                  icon: 'create-outline',
-                  onPress: () =>
-                    router.push({
-                      pathname: '/edit-post/[postId]',
-                      params: { postId: optionsFor.id },
-                    }),
-                },
-                { label: 'Share', icon: 'paper-plane-outline', onPress: () => share(optionsFor) },
-                {
-                  label: 'Delete post',
-                  icon: 'trash-outline',
-                  destructive: true,
-                  onPress: () => remove(optionsFor),
-                },
-              ]
-            : []
-        }
+        options={optionsFor ? menuFor(optionsFor) : []}
       />
+      {reportSheet}
     </View>
   );
 }
@@ -341,6 +389,13 @@ const styles = StyleSheet.create({
   },
   loading: {
     marginTop: 48,
+  },
+  modes: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   emptyBox: {
     alignItems: 'center',

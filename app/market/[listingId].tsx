@@ -8,6 +8,7 @@ import { Avatar } from '@/components/Avatar';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
+import { useReportSheet } from '@/components/SafetyActions';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
 import { CATEGORY_ICONS, deleteListing, fetchListing, formatPrice, type Listing, setListingSold } from '@/lib/listings';
@@ -21,6 +22,7 @@ export default function ListingScreen() {
   const [viewer, setViewer] = useState(false);
   const [busy, setBusy] = useState(false);
   const listing = loaded?.id === listingId ? loaded.listing : undefined;
+  const { openReport, reportSheet } = useReportSheet(() => router.back());
 
   useEffect(() => {
     let cancelled = false;
@@ -138,6 +140,16 @@ export default function ListingScreen() {
           <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
         </Pressable>
 
+        {!mine ? (
+          <Pressable
+            onPress={() => openReport({ kind: 'listing', id: listing.id })}
+            accessibilityRole="button"
+            style={styles.reportRow}>
+            <Ionicons name="flag-outline" size={15} color={Colors.light.muted} />
+            <Text style={styles.reportText}>Report listing</Text>
+          </Pressable>
+        ) : null}
+
         {mine ? (
           <View style={styles.ownerActions}>
             <Pressable
@@ -165,6 +177,7 @@ export default function ListingScreen() {
           <Image source={{ uri: listing.photoUri }} style={styles.viewerImage} contentFit="contain" />
         </Pressable>
       </Modal>
+      {reportSheet}
     </View>
   );
 }
@@ -301,6 +314,17 @@ const styles = StyleSheet.create({
   sellerLink: {
     color: Colors.light.tint,
     fontWeight: '700',
+  },
+  reportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  reportText: {
+    color: Colors.light.muted,
+    fontWeight: '600',
   },
   ownerActions: {
     gap: 4,

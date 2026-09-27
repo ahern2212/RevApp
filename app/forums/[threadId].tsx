@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { useReportSheet } from '@/components/SafetyActions';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
@@ -41,6 +42,17 @@ export default function ThreadScreen() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const current = loaded?.id === threadId ? loaded : null;
+  const { openReport, reportSheet } = useReportSheet((target) => {
+    if (target.kind === 'thread') {
+      router.back();
+      return;
+    }
+    setLoaded((prev) =>
+      prev && prev.thread !== null
+        ? { ...prev, replies: prev.replies.filter((reply) => reply.id !== target.id) }
+        : prev
+    );
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -151,7 +163,15 @@ export default function ThreadScreen() {
                   <Ionicons name="trash-outline" size={15} color={Colors.light.danger} />
                   <Text style={styles.deleteText}>Delete thread</Text>
                 </Pressable>
-              ) : null}
+              ) : (
+                <Pressable
+                  onPress={() => openReport({ kind: 'thread', id: thread.id })}
+                  accessibilityRole="button"
+                  style={styles.deleteThread}>
+                  <Ionicons name="flag-outline" size={15} color={Colors.light.muted} />
+                  <Text style={styles.reportText}>Report</Text>
+                </Pressable>
+              )}
             </View>
           </View>
         }
@@ -178,7 +198,15 @@ export default function ThreadScreen() {
                 accessibilityLabel="Delete reply">
                 <Ionicons name="trash-outline" size={16} color={Colors.light.muted} />
               </Pressable>
-            ) : null}
+            ) : (
+              <Pressable
+                onPress={() => openReport({ kind: 'reply', id: item.id })}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Report reply">
+                <Ionicons name="flag-outline" size={15} color={Colors.light.muted} />
+              </Pressable>
+            )}
           </View>
         )}
       />
@@ -206,6 +234,7 @@ export default function ThreadScreen() {
           )}
         </Pressable>
       </View>
+      {reportSheet}
     </KeyboardAvoidingView>
   );
 }
@@ -292,6 +321,11 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: Colors.light.danger,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  reportText: {
+    color: Colors.light.muted,
     fontWeight: '700',
     fontSize: 13,
   },

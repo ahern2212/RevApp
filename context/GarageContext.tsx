@@ -1,12 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import { isMissingFollows } from '@/lib/follows';
 import { type PickedMedia, readUpload, storagePath } from '@/lib/media';
 import {
   BUCKET,
   fetchFeedPage,
   fetchSaved,
   toPost,
+  type FeedMode,
   type FeedPage,
   type PostRow,
   VIDEO_BUCKET,
@@ -31,6 +33,11 @@ type GarageContextValue = {
   loadingPosts: boolean;
   /** The latest feed load failed (e.g. offline); cleared by the next successful load. */
   feedError: boolean;
+  /** Everyone's posts, or only people you follow. */
+  feedMode: FeedMode;
+  setFeedMode: (mode: FeedMode) => void;
+  /** The Following feed needs the follows database update. */
+  followingUnavailable: boolean;
   refreshing: boolean;
   refresh: () => Promise<void>;
   hasMore: boolean;
@@ -45,6 +52,8 @@ type GarageContextValue = {
   savedIds: Set<string>;
   toggleSave: (postId: string) => Promise<void>;
   adjustCommentCount: (postId: string, delta: number) => void;
+  /** Drops posts from the feed and saves on this device (after a report or a block). */
+  forgetPosts: (match: (post: Post) => boolean) => void;
 };
 
 const GarageContext = createContext<GarageContextValue | null>(null);
@@ -61,34 +70,59 @@ export function GarageProvider({ children }: { children: ReactNode }) {
   const { user, isLoading, signOut } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState<Omit<FeedPage, 'posts'>>({ cursor: null, hasMore: false });
-  // Which user's feed has finished its first load; the feed shows a spinner until it matches.
+  const [feedMode, setFeedModeState] = useState<FeedMode>('all');
+  // Which user + feed mode has finished its first load; the feed shows a spinner until it matches.
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [followingUnavailable, setFollowingUnavailable] = useState(false);
   const [saved, setSaved] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [feedError, setFeedError] = useState(false);
   const userId = user?.id;
+  const feedKey = userId ? `${userId}:${feedMode}` : null;
 
   const applyFirstPage = useCallback((first: FeedPage) => {
     setPosts(first.posts);
     setPage({ cursor: first.cursor, hasMore: first.hasMore });
     setFeedError(false);
+    setFollowingUnavailable(false);
+  }, []);
+
+  const failFeed = useCallback((error: unknown) => {
+    console.warn('Failed to load posts', error);
+    if (isMissingFollows(error)) setFollowingUnavailable(true);
+    else setFeedError(true);
+  }, []);
+
+  const setFeedMode = useCallback((mode: FeedMode) => {
+    setFeedModeState(mode);
+    setPosts([]);
+    setPage({ cursor: null, hasMore: false });
+    setFeedError(false);
+    setFollowingUnavailable(false);
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !feedKey) return;
     let cancelled = false;
-    fetchFeedPage()
+    fetchFeedPage(null, feedMode)
       .then((first) => {
         if (!cancelled) applyFirstPage(first);
       })
       .catch((error) => {
-        console.warn('Failed to load posts', error);
-        if (!cancelled) setFeedError(true);
+        if (!cancelled) failFeed(error);
       })
       .finally(() => {
-        if (!cancelled) setLoadedFor(userId);
+        if (!cancelled) setLoadedFor(feedKey);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, feedKey, feedMode, applyFirstPage, failFeed]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
     // Loaded separately so a problem with saves never blanks the feed.
     fetchSaved()
       .then((next) => {
@@ -98,29 +132,26 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, applyFirstPage]);
+  }, [userId]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [first, nextSaved] = await Promise.allSettled([fetchFeedPage(), fetchSaved()]);
+      const [first, nextSaved] = await Promise.allSettled([fetchFeedPage(null, feedMode), fetchSaved()]);
       if (first.status === 'fulfilled') applyFirstPage(first.value);
-      else {
-        console.warn('Failed to load posts', first.reason);
-        setFeedError(true);
-      }
+      else failFeed(first.reason);
       if (nextSaved.status === 'fulfilled') setSaved(nextSaved.value);
       else console.warn('Failed to load saved posts', nextSaved.reason);
     } finally {
       setRefreshing(false);
     }
-  }, [applyFirstPage]);
+  }, [applyFirstPage, failFeed, feedMode]);
 
   const loadMore = useCallback(async () => {
     if (!page.hasMore || loadingMore || refreshing) return;
     setLoadingMore(true);
     try {
-      const next = await fetchFeedPage(page.cursor);
+      const next = await fetchFeedPage(page.cursor, feedMode);
       setPosts((current) => {
         const seen = new Set(current.map((post) => post.id));
         return [...current, ...next.posts.filter((post) => !seen.has(post.id))];
@@ -131,7 +162,7 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingMore(false);
     }
-  }, [page, loadingMore, refreshing]);
+  }, [page, loadingMore, refreshing, feedMode]);
 
   const addPost = useCallback(
     async (input: NewPost) => {
@@ -286,13 +317,21 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const forgetPosts = useCallback((match: (post: Post) => boolean) => {
+    setPosts((current) => current.filter((post) => !match(post)));
+    setSaved((current) => current.filter((post) => !match(post)));
+  }, []);
+
   const value = useMemo(
     () => ({
       ready: !isLoading,
       user,
       posts,
-      loadingPosts: !!userId && loadedFor !== userId,
+      loadingPosts: !!feedKey && loadedFor !== feedKey,
       feedError,
+      feedMode,
+      setFeedMode,
+      followingUnavailable,
       refreshing,
       refresh,
       hasMore: page.hasMore,
@@ -307,14 +346,18 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       savedIds,
       toggleSave,
       adjustCommentCount,
+      forgetPosts,
     }),
     [
       isLoading,
       user,
-      userId,
+      feedKey,
       posts,
       loadedFor,
       feedError,
+      feedMode,
+      setFeedMode,
+      followingUnavailable,
       refreshing,
       refresh,
       page.hasMore,
@@ -329,6 +372,7 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       savedIds,
       toggleSave,
       adjustCommentCount,
+      forgetPosts,
     ]
   );
 

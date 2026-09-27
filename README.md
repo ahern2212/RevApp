@@ -15,6 +15,8 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Saves** — bookmark any post; private "Saved" section on your profile
 - **Share** — system share sheet (or copy link on desktop browsers)
 - **Profiles** — tap any username to see that person's garage; edit your username, bio and profile picture
+- **Follow** — follow drivers from their profile; follower/following counts and lists; an Everyone / Following switch at the top of the feed; "started following you" in Activity, the in-app horn toast and push
+- **Report & block** — "…" on any post (and long-press a comment, the flag on forum threads and replies, "Report listing" in the market) to report it with a reason; it disappears for you, and anything 3 people report is hidden for everyone but its owner. Block from a post or a profile: neither of you sees the other's posts, comments, threads, listings or garage, follows end, and they can't like or comment on yours. Manage blocks in Edit profile → Blocked accounts
 - **My Garage** — add your cars (year/make/model, nickname, mods) with a photo of each one
 - **Search** — magnifier in the feed header finds drivers by username and builds by car or caption
 - **Activity** — heart button in the feed header lists likes and comments on your posts, with an unread badge
@@ -30,10 +32,10 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 
 | Path | What's there |
 | --- | --- |
-| `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Forums, Post, Market, About, Profile; `comments/` (post page), `user/`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes`, `market/new`, `market/[id]` are stacked screens |
-| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `GarageSection`, `PostVideo`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
+| `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Forums, Post, Market, About, Profile; `comments/` (post page), `user/`, `follows/` (followers/following), `blocked`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes`, `market/new`, `market/[id]` are stacked screens |
+| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `GarageSection`, `PostVideo`, `SafetyActions` (report sheet + block confirm), `FollowStats`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache) |
-| `lib/` | Data + helpers: `supabase`, `posts`, `media` (validated photo/video picker + upload check), `mediaRules` (upload limits, byte sniffing), `videoPoster`, `videoSound`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
+| `lib/` | Data + helpers: `supabase`, `posts`, `media` (validated photo/video picker + upload check), `mediaRules` (upload limits, byte sniffing), `videoPoster`, `videoSound`, `safety` (reports, blocks), `follows`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
 | `constants/` | `themes.ts` (all palettes), `Colors.ts` (picks the active one), `glass.ts` (shared glass card style) |
 | `tests/` | Unit tests for pure helpers (`npm test`, Node's built-in runner) |
 | `supabase/migrations/` | Database schema, run in order in the Supabase SQL Editor |

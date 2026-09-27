@@ -184,6 +184,15 @@ export default function EditProfileScreen() {
         <Text style={styles.buttonText}>{busy === 'save' ? 'Saving…' : 'Save'}</Text>
       </Pressable>
 
+      <Pressable
+        onPress={() => router.push('/blocked')}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}>
+        <Ionicons name="ban-outline" size={20} color={Colors.light.tint} />
+        <Text style={styles.linkRowText}>Blocked accounts</Text>
+        <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
+      </Pressable>
+
       <View style={styles.danger}>
         <Text style={styles.dangerTitle}>Delete account</Text>
         <Text style={styles.dangerText}>
@@ -332,8 +341,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
   },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+  },
+  linkRowPressed: {
+    opacity: 0.8,
+  },
+  linkRowText: {
+    flex: 1,
+    color: Colors.light.text,
+    fontWeight: '700',
+  },
   danger: {
-    marginTop: 40,
+    marginTop: 20,
     padding: 16,
     borderRadius: 14,
     borderWidth: 1,

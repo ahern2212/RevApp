@@ -66,17 +66,22 @@ export function toPost(row: PostRow): Post {
 }
 
 export type FeedPage = { posts: Post[]; cursor: string | null; hasMore: boolean };
+/** 'all' = everyone's posts; 'following' = people you follow, plus your own. */
+export type FeedMode = 'all' | 'following';
+
+function feedQuery(mode: FeedMode, select: string, cursor?: string | null) {
+  // following_posts() returns rows of posts, so PostgREST can embed and filter them the same way.
+  const source =
+    mode === 'following'
+      ? supabase.rpc('following_posts').select(select)
+      : supabase.from('posts').select(select);
+  const filtered = cursor ? source.lt('created_at', cursor) : source;
+  return filtered.order('created_at', { ascending: false }).limit(PAGE_SIZE);
+}
 
 /** One page of the feed, newest first. Pass the previous page's cursor to get older posts. */
-export async function fetchFeedPage(cursor?: string | null): Promise<FeedPage> {
-  const { data, error } = await withPostSelect((select) => {
-    const query = supabase
-      .from('posts')
-      .select(select)
-      .order('created_at', { ascending: false })
-      .limit(PAGE_SIZE);
-    return cursor ? query.lt('created_at', cursor) : query;
-  });
+export async function fetchFeedPage(cursor?: string | null, mode: FeedMode = 'all'): Promise<FeedPage> {
+  const { data, error } = await withPostSelect((select) => feedQuery(mode, select, cursor));
   if (error) throw error;
   const rows = data as unknown as PostRow[];
   return {

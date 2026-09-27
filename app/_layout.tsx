@@ -103,6 +103,8 @@ function RootLayoutNav() {
             options={{ presentation: 'modal', title: 'Edit caption' }}
           />
           <Stack.Screen name="user/[userId]" options={{ title: 'Profile' }} />
+          <Stack.Screen name="follows/[userId]" options={{ title: 'Drivers' }} />
+          <Stack.Screen name="blocked" options={{ title: 'Blocked accounts' }} />
         </Stack>
         <NotificationToaster />
         <PushNotifications />

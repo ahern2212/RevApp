@@ -34,7 +34,7 @@ type Props = {
   onShare: () => void;
   onAuthorPress: () => void;
   onLikesPress: () => void;
-  /** Only passed for the signed-in user's own posts (opens edit/delete options). */
+  /** Opens the "…" menu (edit/delete on your own posts, report/block on others'). */
   onOptions?: () => void;
 };
 

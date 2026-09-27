@@ -17,7 +17,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostVideo } from '@/components/PostVideo';
+import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
@@ -39,6 +41,7 @@ function CommentRow({
   createdAt,
   onNamePress,
   onDelete,
+  onLongPress,
 }: {
   name: string;
   userId?: string;
@@ -46,9 +49,17 @@ function CommentRow({
   createdAt: number;
   onNamePress?: () => void;
   onDelete?: () => void;
+  /** Report/block menu for other people's comments. */
+  onLongPress?: () => void;
 }) {
   return (
-    <View style={styles.row}>
+    <Pressable
+      style={styles.row}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      accessibilityHint={onLongPress ? 'Long-press to report or block' : undefined}
+      accessibilityActions={onLongPress ? [{ name: 'longpress', label: 'Report or block' }] : undefined}
+      onAccessibilityAction={onLongPress}>
       <Avatar name={name} userId={userId} size={32} />
       <View style={styles.rowBody}>
         <Text style={styles.body}>
@@ -68,13 +79,13 @@ function CommentRow({
           <Ionicons name="trash-outline" size={18} color={Colors.light.muted} />
         </Pressable>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
 export default function CommentsScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
-  const { posts, saved, user, adjustCommentCount } = useGarage();
+  const { posts, saved, user, adjustCommentCount, forgetPosts } = useGarage();
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
   // Use the copy the app already has (feed or saves); otherwise fetch it, e.g. when opened
@@ -99,6 +110,62 @@ export default function CommentsScreen() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [menu, setMenu] = useState<SheetOption[] | null>(null);
+
+  const dropComments = (match: (comment: Comment) => boolean) => {
+    const gone = (comments ?? []).filter(match).length;
+    setComments((current) => (current ?? []).filter((c) => !match(c)));
+    if (gone) adjustCommentCount(postId, -gone);
+  };
+
+  const { openReport, reportSheet } = useReportSheet((target) => {
+    if (target.kind === 'comment') {
+      dropComments((c) => c.id === target.id);
+    } else {
+      forgetPosts((p) => p.id === target.id);
+      router.back();
+    }
+  });
+
+  const block = async (authorId: string, authorName: string) => {
+    if (!(await confirmBlock(authorId, authorName))) return;
+    forgetPosts((p) => p.authorId === authorId);
+    if (post?.authorId === authorId) router.back();
+    else dropComments((c) => c.authorId === authorId);
+  };
+
+  const openPostMenu = () =>
+    post &&
+    setMenu([
+      {
+        label: 'Report post',
+        icon: 'flag-outline',
+        destructive: true,
+        onPress: () => openReport({ kind: 'post', id: post.id }),
+      },
+      {
+        label: `Block @${post.authorName}`,
+        icon: 'ban-outline',
+        destructive: true,
+        onPress: () => block(post.authorId, post.authorName),
+      },
+    ]);
+
+  const openCommentMenu = (comment: Comment) =>
+    setMenu([
+      {
+        label: 'Report comment',
+        icon: 'flag-outline',
+        destructive: true,
+        onPress: () => openReport({ kind: 'comment', id: comment.id }),
+      },
+      {
+        label: `Block @${comment.authorName}`,
+        icon: 'ban-outline',
+        destructive: true,
+        onPress: () => block(comment.authorId, comment.authorName),
+      },
+    ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +246,20 @@ export default function CommentsScreen() {
                   />
                 </Pressable>
               )}
-              {post.car ? <Text style={styles.car}>{post.car}</Text> : null}
+              {post.car || post.authorId !== user?.id ? (
+              <View style={styles.carRow}>
+                <Text style={styles.car}>{post.car}</Text>
+                {post.authorId !== user?.id ? (
+                  <Pressable
+                    onPress={openPostMenu}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Post options">
+                    <Ionicons name="ellipsis-horizontal" size={20} color={Colors.light.text} />
+                  </Pressable>
+                ) : null}
+              </View>
+              ) : null}
               <CommentRow
                 name={post.authorName}
                 userId={post.authorId}
@@ -208,6 +288,7 @@ export default function CommentsScreen() {
             createdAt={item.createdAt}
             onNamePress={() => openProfile(item.authorId, item.authorName)}
             onDelete={item.authorId === user?.id ? () => remove(item.id) : undefined}
+            onLongPress={item.authorId !== user?.id ? () => openCommentMenu(item) : undefined}
           />
         )}
       />
@@ -253,6 +334,8 @@ export default function CommentsScreen() {
           </Pressable>
         </Modal>
       ) : null}
+      <OptionsSheet visible={menu !== null} options={menu ?? []} onClose={() => setMenu(null)} />
+      {reportSheet}
     </KeyboardAvoidingView>
   );
 }
@@ -295,11 +378,18 @@ const styles = StyleSheet.create({
   video: {
     overflow: 'hidden',
   },
+  carRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
   car: {
+    flex: 1,
     color: Colors.light.tint,
     fontWeight: '800',
     fontSize: 16,
-    marginBottom: 10,
   },
   captionBlock: {
     gap: 0,

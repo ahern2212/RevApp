@@ -16,6 +16,12 @@ export function confirm(title: string, message: string, confirmLabel = 'OK'): Pr
   );
 }
 
+/** Plain message (no buttons besides OK) that also shows on the web. */
+export function showNotice(title: string, message: string): void {
+  if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
+  else Alert.alert(title, message);
+}
+
 /** Error message that also shows on the web, where Alert.alert does nothing. */
 export function showError(title: string, error: unknown): void {
   const message = error instanceof Error ? error.message : 'Please try again.';
