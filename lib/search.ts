@@ -1,4 +1,4 @@
-import { POST_SELECT, toPost, type PostRow } from '@/lib/posts';
+import { type PostRow, toPost, withPostSelect } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import type { Post } from '@/types';
 
@@ -21,12 +21,14 @@ export async function search(query: string): Promise<SearchResults> {
 
   const [drivers, posts] = await Promise.all([
     supabase.from('profiles').select('id, username').ilike('username', `%${q}%`).limit(USER_LIMIT),
-    supabase
-      .from('posts')
-      .select(POST_SELECT)
-      .or(`car.ilike.%${q}%,caption.ilike.%${q}%`)
-      .order('created_at', { ascending: false })
-      .limit(POST_LIMIT),
+    withPostSelect((select) =>
+      supabase
+        .from('posts')
+        .select(select)
+        .or(`car.ilike.%${q}%,caption.ilike.%${q}%`)
+        .order('created_at', { ascending: false })
+        .limit(POST_LIMIT)
+    ),
   ]);
   if (drivers.error) throw drivers.error;
   if (posts.error) throw posts.error;

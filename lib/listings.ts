@@ -1,3 +1,4 @@
+import { readUpload, storagePath } from '@/lib/media';
 import { BUCKET } from '@/lib/posts';
 import { cleanSearchQuery } from '@/lib/search';
 import { supabase } from '@/lib/supabase';
@@ -127,15 +128,13 @@ export type NewListing = {
   location: string;
   description: string;
   contact: string;
-  photo: { uri: string; mimeType?: string };
+  photo: { uri: string };
 };
 
 export async function createListing(sellerId: string, input: NewListing): Promise<Listing> {
-  const contentType = input.photo.mimeType ?? 'image/jpeg';
-  const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+  const { body, contentType, ext } = await readUpload(input.photo.uri, 'image');
   // Flat in the seller's folder so account deletion's cleanup catches it.
-  const path = `${sellerId}/listing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
-  const body = await (await fetch(input.photo.uri)).arrayBuffer();
+  const path = storagePath(sellerId, 'listing', ext);
   const upload = await supabase.storage.from(BUCKET).upload(path, body, { contentType });
   if (upload.error) throw upload.error;
 

@@ -1,53 +1,54 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CarDetailsInput } from '@/components/CarDetailsInput';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
+import { PostVideo } from '@/components/PostVideo';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
-import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { useGarage } from '@/context/GarageContext';
 import { showError } from '@/lib/confirm';
 import { useTabBarSpace } from '@/lib/layout';
+import { type PickedMedia, pickPostMedia } from '@/lib/media';
+import { formatDuration, VIDEO_MAX_SECONDS } from '@/lib/mediaRules';
 import { type CarDetails, formatCar } from '@/lib/vehicles';
 
 const EMPTY_CAR: CarDetails = { year: '', make: '', model: '' };
+const CAPTION_MAX = 2200;
 
 export default function PostScreen() {
   const { addPost } = useGarage();
   const router = useRouter();
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [mimeType, setMimeType] = useState<string | undefined>();
+  const [media, setMedia] = useState<PickedMedia | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [car, setCar] = useState<CarDetails>(EMPTY_CAR);
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
   const tabBarSpace = useTabBarSpace();
-  const canShare = !!imageUri && !busy;
+  const canShare = !!media && !busy && !preparing;
+  const isVideo = media?.kind === 'video';
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-      setMimeType(result.assets[0].mimeType);
+  const pick = async () => {
+    setPreparing(true);
+    try {
+      const picked = await pickPostMedia();
+      if (picked) setMedia(picked);
+    } catch (error) {
+      showError('Can’t post that', error);
+    } finally {
+      setPreparing(false);
     }
   };
 
   const share = async () => {
-    if (!imageUri) {
-      showError('Add a photo', new Error('Pick a car photo before sharing.'));
-      return;
-    }
+    if (!media) return;
     setBusy(true);
     try {
-      await addPost({ imageUri, mimeType, caption, car: formatCar(car) });
-      setImageUri(null);
-      setMimeType(undefined);
+      await addPost({ media, caption, car: formatCar(car) });
+      setMedia(null);
       setCar(EMPTY_CAR);
       setCaption('');
       router.replace('/');
@@ -62,60 +63,86 @@ export default function PostScreen() {
     <View style={styles.screen}>
       <GlassBackdrop />
       <ScrollView
-      style={styles.wrap}
-      contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
-      keyboardShouldPersistTaps="handled"
-      automaticallyAdjustKeyboardInsets>
-      <Pressable
-        onPress={pickImage}
-        style={styles.picker}
-        accessibilityRole="button"
-        accessibilityLabel={imageUri ? 'Change photo' : 'Choose a car photo'}>
-        {imageUri ? (
-          <>
-            <Image source={{ uri: imageUri }} style={styles.preview} contentFit="cover" />
-            <View style={styles.changeBadge}>
-              <Ionicons name="images-outline" size={14} color={Colors.light.onTint} />
-              <Text style={styles.changeText}>Change</Text>
+        style={styles.wrap}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets>
+        <Pressable
+          onPress={pick}
+          disabled={preparing || busy}
+          style={styles.picker}
+          accessibilityRole="button"
+          accessibilityLabel={media ? 'Change photo or video' : 'Choose a car photo or video'}>
+          {preparing ? (
+            <View style={styles.pickerEmpty}>
+              <ActivityIndicator color={Colors.light.tint} />
+              <Text style={styles.pickerText}>Checking your file…</Text>
             </View>
-          </>
-        ) : (
-          <View style={styles.pickerEmpty}>
-            <Ionicons name="camera-outline" size={40} color={Colors.light.tint} />
-            <Text style={styles.pickerText}>Tap to choose a car photo</Text>
-          </View>
-        )}
-      </Pressable>
-      <CarDetailsInput value={car} onChange={setCar} />
-      <TextInput
-        value={caption}
-        onChangeText={setCaption}
-        placeholder="Caption"
-        maxLength={CAPTION_MAX}
-        placeholderTextColor={Colors.light.placeholder}
-        multiline
-        style={[styles.input, styles.caption]}
-      />
-      {caption.length > CAPTION_MAX - 200 ? (
-        <Text style={styles.counter}>
-          {caption.length}/{CAPTION_MAX}
-        </Text>
-      ) : null}
-      <Pressable
-        style={[styles.button, !canShare && styles.buttonDisabled]}
-        disabled={!canShare}
-        onPress={share}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canShare, busy }}>
-        <Text style={styles.buttonText}>{busy ? 'Sharing…' : 'Share'}</Text>
-      </Pressable>
-      {!imageUri ? <Text style={styles.hint}>Add a photo to share your build.</Text> : null}
-    </ScrollView>
+          ) : media ? (
+            <>
+              {media.kind === 'video' && media.posterUri ? (
+                <PostVideo uri={media.uri} posterUri={media.posterUri} active style={styles.preview} />
+              ) : (
+                <Image source={{ uri: media.uri }} style={styles.preview} contentFit="cover" />
+              )}
+              {media.kind === 'video' && media.durationMs ? (
+                <View style={[styles.badge, styles.durationBadge]}>
+                  <Ionicons name="videocam" size={14} color={Colors.light.onTint} />
+                  <Text style={styles.badgeText}>{formatDuration(media.durationMs)}</Text>
+                </View>
+              ) : null}
+              <View style={[styles.badge, styles.changeBadge]}>
+                <Ionicons name="images-outline" size={14} color={Colors.light.onTint} />
+                <Text style={styles.badgeText}>Change</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.pickerEmpty}>
+              <View style={styles.pickerIcons}>
+                <Ionicons name="camera-outline" size={40} color={Colors.light.tint} />
+                <Ionicons name="videocam-outline" size={40} color={Colors.light.tint} />
+              </View>
+              <Text style={styles.pickerText}>Tap to choose a car photo or video</Text>
+              <Text style={styles.rules}>
+                JPEG, PNG, WebP or HEIC photos · MP4 or MOV videos up to {VIDEO_MAX_SECONDS} seconds
+              </Text>
+            </View>
+          )}
+        </Pressable>
+        <CarDetailsInput value={car} onChange={setCar} />
+        <TextInput
+          value={caption}
+          onChangeText={setCaption}
+          placeholder="Caption"
+          maxLength={CAPTION_MAX}
+          placeholderTextColor={Colors.light.placeholder}
+          multiline
+          style={[styles.input, styles.caption]}
+        />
+        {caption.length > CAPTION_MAX - 200 ? (
+          <Text style={styles.counter}>
+            {caption.length}/{CAPTION_MAX}
+          </Text>
+        ) : null}
+        <Pressable
+          style={[styles.button, !canShare && styles.buttonDisabled]}
+          disabled={!canShare}
+          onPress={share}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canShare, busy }}>
+          <Text style={styles.buttonText}>
+            {busy ? (isVideo ? 'Uploading video…' : 'Sharing…') : 'Share'}
+          </Text>
+        </Pressable>
+        {!media ? (
+          <Text style={styles.hint}>
+            Photos are cleaned before upload: location and camera details are removed.
+          </Text>
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
-
-const CAPTION_MAX = 2200;
 
 const styles = StyleSheet.create({
   screen: {
@@ -145,10 +172,14 @@ const styles = StyleSheet.create({
   pickerEmpty: {
     alignItems: 'center',
     gap: 8,
+    paddingHorizontal: 24,
   },
-  changeBadge: {
+  pickerIcons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  badge: {
     position: 'absolute',
-    right: 12,
     bottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -158,7 +189,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  changeText: {
+  changeBadge: {
+    right: 12,
+  },
+  durationBadge: {
+    left: 12,
+  },
+  badgeText: {
     color: Colors.light.onTint,
     fontWeight: '700',
     fontSize: 12,
@@ -180,6 +217,12 @@ const styles = StyleSheet.create({
   pickerText: {
     color: Colors.light.muted,
     fontSize: 16,
+    textAlign: 'center',
+  },
+  rules: {
+    color: Colors.light.muted,
+    fontSize: 12,
+    textAlign: 'center',
   },
   preview: {
     width: '100%',

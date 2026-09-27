@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -28,6 +27,7 @@ import {
   saveCar,
 } from '@/lib/cars';
 import { confirm, showError } from '@/lib/confirm';
+import { type PickedMedia, pickPhoto } from '@/lib/media';
 
 const BLANK: CarInput = { nickname: '', year: '', make: '', model: '', mods: '' };
 
@@ -37,7 +37,7 @@ export default function EditCarScreen() {
   const { user } = useGarage();
   const [existing, setExisting] = useState<{ id: string; car: Car | null } | null>(null);
   const [form, setForm] = useState<CarInput | null>(null);
-  const [photo, setPhoto] = useState<{ uri: string; mimeType?: string } | 'remove' | undefined>();
+  const [photo, setPhoto] = useState<PickedMedia | 'remove' | undefined>();
   const [busy, setBusy] = useState(false);
 
   const car = carId && existing?.id === carId ? existing.car : undefined;
@@ -71,8 +71,12 @@ export default function EditCarScreen() {
   const photoUri = photo === 'remove' ? null : photo ? photo.uri : (car?.photoUri ?? null);
 
   const choosePhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-    if (!result.canceled) setPhoto({ uri: result.assets[0].uri, mimeType: result.assets[0].mimeType });
+    try {
+      const picked = await pickPhoto();
+      if (picked) setPhoto(picked);
+    } catch (error) {
+      showError('Can’t use that photo', error);
+    }
   };
 
   const save = async () => {

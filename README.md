@@ -6,7 +6,9 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 
 - **Accounts** — email + password sign-up/sign-in; sessions persist until you sign out; delete your account (and everything in it) from Edit profile
 - **Feed** — newest posts first, loads more as you scroll, pull to refresh; the retro banner header slides away as you scroll down and returns when you scroll up; tap the Feed tab to jump to the top; a "new posts" pill appears when others post
-- **Posts** — photo + car (year/make/model suggestions from NHTSA) + caption; "…" menu on your own posts to edit the caption or delete
+- **Posts** — photo or video (up to 60 seconds) + car (year/make/model suggestions from NHTSA) + caption; "…" menu on your own posts to edit the caption or delete
+- **Videos** — play muted and loop when they scroll into view, like Instagram; tap for sound (it stays on for the next video), double-tap to like; grids show a play icon; the post page has full playback controls
+- **Upload safety** — only real photos (JPEG, PNG, WebP, HEIC) and videos (MP4, MOV, 1–60 s, 50 MB) are accepted, checked by their actual bytes, not the file name. Every photo is re-encoded on the device, which strips GPS location and camera details and turns HEIC into JPEG. Tiny or stretched images are refused. The database enforces the same types, sizes, folders and file names, and rate-limits posts, comments, listings, threads, meets and garage cars
 - **Post page** — photo (tap for full screen), car, caption and comments; opened from the feed, grids, Activity and shared links
 - **Likes** — tap the heart or double-tap the photo; tap the count to see who liked it
 - **Comments** — the car button opens comments; delete your own
@@ -29,9 +31,9 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 | Path | What's there |
 | --- | --- |
 | `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Forums, Post, Market, About, Profile; `comments/` (post page), `user/`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes`, `market/new`, `market/[id]` are stacked screens |
-| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `GarageSection`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
+| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `GarageSection`, `PostVideo`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache) |
-| `lib/` | Data + helpers: `supabase`, `posts`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
+| `lib/` | Data + helpers: `supabase`, `posts`, `media` (validated photo/video picker + upload check), `mediaRules` (upload limits, byte sniffing), `videoPoster`, `videoSound`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
 | `constants/` | `themes.ts` (all palettes), `Colors.ts` (picks the active one), `glass.ts` (shared glass card style) |
 | `tests/` | Unit tests for pure helpers (`npm test`, Node's built-in runner) |
 | `supabase/migrations/` | Database schema, run in order in the Supabase SQL Editor |
@@ -90,4 +92,4 @@ Native builds on EAS don't see GitHub secrets: add the `EXPO_PUBLIC_*` values as
 npx eas-cli@latest build --profile development --platform android   # or ios
 ```
 
-Install the build from the link it prints, then `npx expo start`. Android push also needs a Firebase `google-services.json` and FCM V1 credentials uploaded with `npx eas-cli@latest credentials`; iOS needs a paid Apple Developer account. Rebuild only when you add native packages or change `app.json`.
+Install the build from the link it prints, then `npx expo start`. **Video posts and photo cleaning use `expo-video` and `expo-image-manipulator`, so existing development builds must be rebuilt once.** Android push also needs a Firebase `google-services.json` and FCM V1 credentials uploaded with `npx eas-cli@latest credentials`; iOS needs a paid Apple Developer account. Rebuild only when you add native packages or change `app.json`.

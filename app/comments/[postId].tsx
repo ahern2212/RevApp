@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { PostVideo } from '@/components/PostVideo';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
@@ -157,17 +158,27 @@ export default function CommentsScreen() {
         ListHeaderComponent={
           post ? (
             <View style={styles.captionBlock}>
-              <Pressable
-                onPress={() => setViewerOpen(true)}
-                accessibilityRole="imagebutton"
-                accessibilityLabel={post.car ? `Photo of ${post.car}. View full screen` : 'View photo full screen'}>
-                <Image
-                  source={{ uri: post.imageUri }}
-                  style={styles.photo}
-                  contentFit="cover"
-                  transition={150}
+              {post.videoUri ? (
+                <PostVideo
+                  uri={post.videoUri}
+                  posterUri={post.imageUri}
+                  active
+                  controls
+                  style={[styles.photo, styles.video]}
                 />
-              </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => setViewerOpen(true)}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={post.car ? `Photo of ${post.car}. View full screen` : 'View photo full screen'}>
+                  <Image
+                    source={{ uri: post.imageUri }}
+                    style={styles.photo}
+                    contentFit="cover"
+                    transition={150}
+                  />
+                </Pressable>
+              )}
               {post.car ? <Text style={styles.car}>{post.car}</Text> : null}
               <CommentRow
                 name={post.authorName}
@@ -280,6 +291,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: Colors.light.imagePlaceholder,
     marginBottom: 12,
+  },
+  video: {
+    overflow: 'hidden',
   },
   car: {
     color: Colors.light.tint,

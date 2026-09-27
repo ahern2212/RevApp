@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -27,7 +28,7 @@ export function PostGrid({ posts, emptyText }: Props) {
             router.push({ pathname: '/comments/[postId]', params: { postId: post.id } })
           }
           accessibilityRole="button"
-          accessibilityLabel={`Open post${post.car ? `: ${post.car}` : ''}`}
+          accessibilityLabel={`Open ${post.videoUri ? 'video' : 'post'}${post.car ? `: ${post.car}` : ''}`}
           style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
           <Image
             source={{ uri: post.imageUri }}
@@ -35,6 +36,9 @@ export function PostGrid({ posts, emptyText }: Props) {
             contentFit="cover"
             transition={150}
           />
+          {post.videoUri ? (
+            <Ionicons name="play" size={18} color="#ffffff" style={styles.videoIcon} />
+          ) : null}
         </Pressable>
       ))}
     </View>
@@ -58,6 +62,14 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  videoIcon: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   empty: {
     color: Colors.light.muted,

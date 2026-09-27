@@ -1,7 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, useScrollToTop } from 'expo-router';
-import { useRef, useState } from 'react';
-import { ActivityIndicator, type FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  type FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewToken,
+} from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -25,6 +34,8 @@ import { useNewPostsCount } from '@/lib/useNewPostsCount';
 import type { Post } from '@/types';
 
 const SNAP_MS = 180;
+// A video starts playing once most of it is on screen.
+const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
 export default function FeedScreen() {
   const {
@@ -48,6 +59,13 @@ export default function FeedScreen() {
   const tabBarSpace = useTabBarSpace();
   const newPosts = useNewPostsCount(posts[0]?.createdAt ?? null);
   const [optionsFor, setOptionsFor] = useState<Post | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+
+  // The first video that's mostly on screen plays; everything else shows its poster.
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken<Post>[] }) => {
+    const video = viewableItems.find((token) => token.isViewable && token.item.videoUri);
+    setActiveVideoId(video ? video.item.id : null);
+  }, []);
 
   const openProfile = (post: Post) =>
     router.push({
@@ -61,7 +79,7 @@ export default function FeedScreen() {
   const remove = async (post: Post) => {
     const ok = await confirm(
       'Delete this post?',
-      'The photo, likes and comments will be removed for everyone. This can’t be undone.',
+      'The photo or video, likes and comments will be removed for everyone. This can’t be undone.',
       'Delete'
     );
     if (!ok) return;
@@ -146,6 +164,7 @@ export default function FeedScreen() {
         renderItem={({ item }: { item: Post }) => (
           <PostCard
             post={item}
+            active={item.id === activeVideoId}
             liked={!!user && item.likedBy.includes(user.id)}
             onLike={() => toggleLike(item.id)}
             onComment={() =>
@@ -163,6 +182,8 @@ export default function FeedScreen() {
         )}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        viewabilityConfig={VIEWABILITY}
+        onViewableItemsChanged={onViewableItemsChanged}
         refreshing={refreshing}
         onRefresh={refresh}
         progressViewOffset={headerHeight}

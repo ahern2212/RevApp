@@ -1,3 +1,4 @@
+import { readUpload, storagePath } from '@/lib/media';
 import { BUCKET } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 
@@ -82,14 +83,12 @@ export async function fetchCar(carId: string): Promise<Car | null> {
   return data ? toCar(data as CarRow) : null;
 }
 
-type PhotoChange = { uri: string; mimeType?: string } | 'remove' | undefined;
+type PhotoChange = { uri: string } | 'remove' | undefined;
 
-async function uploadPhoto(ownerId: string, photo: { uri: string; mimeType?: string }) {
-  const contentType = photo.mimeType ?? 'image/jpeg';
-  const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+async function uploadPhoto(ownerId: string, photo: { uri: string }) {
+  const { body, contentType, ext } = await readUpload(photo.uri, 'image');
   // Flat in the owner's folder so account deletion's folder cleanup catches it.
-  const path = `${ownerId}/car-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
-  const body = await (await fetch(photo.uri)).arrayBuffer();
+  const path = storagePath(ownerId, 'car', ext);
   const { error } = await supabase.storage.from(BUCKET).upload(path, body, { contentType });
   if (error) throw error;
   return path;

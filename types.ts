@@ -8,7 +8,10 @@ export type Post = {
   authorId: string;
   authorName: string;
   imagePath: string;
+  /** For videos this is the poster frame. */
   imageUri: string;
+  videoPath: string | null;
+  videoUri: string | null;
   caption: string;
   car: string;
   createdAt: number;

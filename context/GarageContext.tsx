@@ -1,19 +1,28 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import { type PickedMedia, readUpload, storagePath } from '@/lib/media';
 import {
   BUCKET,
   fetchFeedPage,
   fetchSaved,
-  POST_SELECT,
   toPost,
   type FeedPage,
   type PostRow,
+  VIDEO_BUCKET,
+  withPostSelect,
 } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import type { Post, User } from '@/types';
 
-type NewPost = { imageUri: string; mimeType?: string; caption: string; car: string };
+type NewPost = { media: PickedMedia; caption: string; car: string };
+
+/** Storage says "Bucket not found" until the media-safety migration has created it. */
+function videoUploadError(error: Error): Error {
+  return /bucket not found/i.test(error.message)
+    ? new Error('Video posts need the latest database update. Share a photo for now.')
+    : error;
+}
 
 type GarageContextValue = {
   ready: boolean;
@@ -127,27 +136,51 @@ export function GarageProvider({ children }: { children: ReactNode }) {
   const addPost = useCallback(
     async (input: NewPost) => {
       if (!userId) throw new Error('You need to be signed in to post.');
+      const { media } = input;
+      const isVideo = media.kind === 'video';
+      if (isVideo && !media.posterUri) throw new Error('Pick the video again so we can make its cover.');
 
-      const contentType = input.mimeType ?? 'image/jpeg';
-      const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
-      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      // Byte-level checks run before anything leaves the device.
+      const image = await readUpload(isVideo ? media.posterUri! : media.uri, 'image');
+      const video = isVideo ? await readUpload(media.uri, 'video') : null;
+      const imagePath = storagePath(userId, isVideo ? 'poster' : '', image.ext);
+      const videoPath = video ? storagePath(userId, 'video', video.ext) : null;
 
-      const body = await (await fetch(input.imageUri)).arrayBuffer();
-      const upload = await supabase.storage.from(BUCKET).upload(path, body, { contentType });
-      if (upload.error) throw upload.error;
+      const uploaded: { bucket: string; path: string }[] = [];
+      const cleanUp = () =>
+        Promise.all(uploaded.map(({ bucket, path }) => supabase.storage.from(bucket).remove([path])));
+      try {
+        const imageUpload = await supabase.storage
+          .from(BUCKET)
+          .upload(imagePath, image.body, { contentType: image.contentType });
+        if (imageUpload.error) throw imageUpload.error;
+        uploaded.push({ bucket: BUCKET, path: imagePath });
 
-      const { data, error } = await supabase
-        .from('posts')
-        .insert({ image_path: path, car: input.car.trim(), caption: input.caption.trim() })
-        .select(POST_SELECT)
-        .single();
-      if (error) {
-        await supabase.storage.from(BUCKET).remove([path]);
+        if (video && videoPath) {
+          const videoUpload = await supabase.storage
+            .from(VIDEO_BUCKET)
+            .upload(videoPath, video.body, { contentType: video.contentType });
+          if (videoUpload.error) throw videoUploadError(videoUpload.error);
+          uploaded.push({ bucket: VIDEO_BUCKET, path: videoPath });
+        }
+
+        const row = {
+          image_path: imagePath,
+          car: input.car.trim(),
+          caption: input.caption.trim(),
+          ...(videoPath ? { video_path: videoPath } : {}),
+        };
+        const { data, error } = await withPostSelect((select) =>
+          supabase.from('posts').insert(row).select(select).single()
+        );
+        if (error) throw error;
+
+        const post = toPost(data as unknown as PostRow);
+        setPosts((current) => [post, ...current]);
+      } catch (error) {
+        await cleanUp().catch(() => {});
         throw error;
       }
-
-      const post = toPost(data as unknown as PostRow);
-      setPosts((current) => [post, ...current]);
     },
     [userId]
   );
@@ -166,6 +199,10 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       // Best effort: the post is already gone even if the photo cleanup fails.
       const removal = await supabase.storage.from(BUCKET).remove([post.imagePath]);
       if (removal.error) console.warn('Failed to delete photo', removal.error);
+      if (post.videoPath) {
+        const videoRemoval = await supabase.storage.from(VIDEO_BUCKET).remove([post.videoPath]);
+        if (videoRemoval.error) console.warn('Failed to delete video', videoRemoval.error);
+      }
 
       setPosts((current) => current.filter((p) => p.id !== postId));
       setSaved((current) => current.filter((p) => p.id !== postId));
