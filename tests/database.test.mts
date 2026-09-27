@@ -490,3 +490,22 @@ test('sharing a post in a message: preview text, and only posts you can see', as
     )
   );
 });
+
+test('explore and suggestions respect follows and blocks', async () => {
+  const { alice, bob, carol, dave } = users;
+  const explore = await as(dave, () => q(`select id from explore_posts()`));
+  assert.ok(explore.length > 0 && explore.length <= 30);
+
+  // Dave follows alice; alice follows bob, so bob is a mutual suggestion for dave.
+  await as(dave, () => q(`insert into follows (followee_id) values ($1) on conflict do nothing`, [alice]));
+  await as(alice, () => q(`insert into follows (followee_id) values ($1) on conflict do nothing`, [bob]));
+  const suggestions = await as(dave, () => q(`select id, mutuals from suggested_drivers(10)`));
+  const ids = suggestions.map((row) => row.id);
+  assert.ok(!ids.includes(dave), 'not yourself');
+  assert.ok(!ids.includes(alice), 'not people you already follow');
+  assert.equal(ids[0], bob, 'mutuals first');
+  assert.equal(Number(suggestions[0].mutuals), 1);
+
+  const carolSuggestions = (await as(carol, () => q(`select id from suggested_drivers(10)`))).map((row) => row.id);
+  assert.ok(!carolSuggestions.includes(bob), 'never someone on either side of a block');
+});

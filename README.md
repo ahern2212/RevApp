@@ -22,7 +22,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Report & block** — "…" on any post (and long-press a comment, the flag on forum threads and replies, "Report listing" in the market) to report it with a reason; it disappears for you, and anything 3 people report is hidden for everyone but its owner. Block from a post or a profile: neither of you sees the other's posts, comments, threads, listings or garage, follows end, and they can't like or comment on yours. Manage blocks in Edit profile → Blocked accounts
 - **My Garage** — add your cars (year/make/model, nickname, mods) with a photo of each one
 - **Car pages** — every garage car has its own page (photo, mods, owner) with a build log of the posts it's tagged in; tag one of your cars when posting and the car name in the feed links to it
-- **Search** — magnifier in the feed header finds drivers by username and builds by car or caption; before you type, it shows the week's trending #tags
+- **Search** — magnifier in the feed header finds drivers by username and builds by car or caption; before you type it's an Explore page: the week's trending #tags, drivers to follow (people your follows follow, then the most followed; one-tap Follow) and a grid of the most-liked posts of the last two weeks
 - **Activity** — heart button in the feed header lists likes, comments, new followers and mentions, with an unread badge
 - **Notifications** — car-horn pop-up while the app is open; push notifications with the horn sound when it's closed (development/store builds only)
 - **Forums** — threads in General, Builds, Tech Help, Meets and Off-Topic, with replies; search, sort (Active / New / Top / Unanswered), "Mine" and category filters

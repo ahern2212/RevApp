@@ -33,6 +33,33 @@ export async function fetchTrendingTags(): Promise<TagCount[]> {
   return topTags((data as { caption: string }[]).map((row) => row.caption), TRENDING_LIMIT);
 }
 
+// Missing function: the explore migration hasn't been run yet, so the section just hides.
+const isMissingFunction = (code?: string) => code === 'PGRST202' || code === '42883';
+
+/** The most-liked posts of the last two weeks. */
+export async function fetchExplorePosts(): Promise<Post[]> {
+  const { data, error } = await supabase.rpc('explore_posts').select(POST_SELECT);
+  if (error) {
+    if (isMissingFunction(error.code)) return [];
+    throw error;
+  }
+  return (data as unknown as PostRow[]).map(toPost);
+}
+
+export type SuggestedDriver = { id: string; username: string; followers: number; mutuals: number };
+
+/** Drivers you don't follow yet: followed by people you follow first, then the most followed. */
+export async function fetchSuggestedDrivers(): Promise<SuggestedDriver[]> {
+  const { data, error } = await supabase.rpc('suggested_drivers', { max_count: 10 });
+  if (error) {
+    if (isMissingFunction(error.code)) return [];
+    throw error;
+  }
+  return (data as { id: string; username: string; followers: number | string; mutuals: number | string }[]).map(
+    (row) => ({ id: row.id, username: row.username, followers: Number(row.followers), mutuals: Number(row.mutuals) })
+  );
+}
+
 /** Drivers whose username matches, and posts whose car or caption matches. */
 export async function search(query: string): Promise<SearchResults> {
   const q = cleanSearchQuery(query);
