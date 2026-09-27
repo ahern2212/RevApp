@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { tokenize } from '../lib/richText.ts';
+import { tokenize, topTags } from '../lib/richText.ts';
 
 test('tokenize finds hashtags and mentions between plain text', () => {
   assert.deepEqual(tokenize('New wheels on the #civic, thanks @maya_k!'), [
@@ -47,5 +47,24 @@ test('tokens next to punctuation and emoji', () => {
     { kind: 'text', text: '(' },
     { kind: 'mention', text: '@turbo_tom', handle: 'turbo_tom' },
     { kind: 'text', text: ')' },
+  ]);
+});
+
+test('topTags counts each tag once per caption and ranks by use', () => {
+  const captions = [
+    '#JDM #jdm night meet #supra',
+    'clean #supra',
+    '#stance #supra #jdm',
+    'no tags here',
+  ];
+  assert.deepEqual(topTags(captions, 2), [
+    { tag: 'supra', count: 3 },
+    { tag: 'jdm', count: 2 },
+  ]);
+  assert.deepEqual(topTags([], 5), []);
+  // Ties sort alphabetically so the list doesn't jump around.
+  assert.deepEqual(topTags(['#b #a'], 5), [
+    { tag: 'a', count: 1 },
+    { tag: 'b', count: 1 },
   ]);
 });

@@ -1,9 +1,13 @@
 import { POST_SELECT, type PostRow, toPost } from '@/lib/posts';
+import { type TagCount, topTags } from '@/lib/richText';
 import { supabase } from '@/lib/supabase';
 import type { Post } from '@/types';
 
 const USER_LIMIT = 8;
 const POST_LIMIT = 30;
+const TRENDING_DAYS = 7;
+const TRENDING_SAMPLE = 500;
+const TRENDING_LIMIT = 12;
 
 export type Driver = { id: string; username: string };
 export type SearchResults = { drivers: Driver[]; posts: Post[] };
@@ -13,6 +17,20 @@ export type SearchResults = { drivers: Driver[]; posts: Post[] };
 // tapping a hashtag searches for that exact tag.
 export function cleanSearchQuery(query: string): string {
   return query.replace(/[^\p{L}\p{N}\s#._-]/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** The most-used #tags in captions from the last week. */
+export async function fetchTrendingTags(): Promise<TagCount[]> {
+  const since = new Date(Date.now() - TRENDING_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('posts')
+    .select('caption')
+    .gte('created_at', since)
+    .like('caption', '%#%')
+    .order('created_at', { ascending: false })
+    .limit(TRENDING_SAMPLE);
+  if (error) throw error;
+  return topTags((data as { caption: string }[]).map((row) => row.caption), TRENDING_LIMIT);
 }
 
 /** Drivers whose username matches, and posts whose car or caption matches. */

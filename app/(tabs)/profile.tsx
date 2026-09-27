@@ -19,10 +19,11 @@ import { useTabBarSpace } from '@/lib/layout';
 import { fetchUserPosts } from '@/lib/posts';
 import type { Post } from '@/types';
 
-type Section = 'posts' | 'saved';
+type Section = 'posts' | 'videos' | 'saved';
 
-const SECTIONS: { key: Section; label: string; icon: 'grid-outline' | 'bookmark-outline' }[] = [
+const SECTIONS: { key: Section; label: string; icon: 'grid-outline' | 'play-circle-outline' | 'bookmark-outline' }[] = [
   { key: 'posts', label: 'Posts', icon: 'grid-outline' },
+  { key: 'videos', label: 'Videos', icon: 'play-circle-outline' },
   { key: 'saved', label: 'Saved', icon: 'bookmark-outline' },
 ];
 
@@ -70,7 +71,8 @@ export default function ProfileScreen() {
   // Until the first load finishes, fall back to what the feed already has.
   const myPosts = mine ?? posts.filter((post) => post.authorId === userId);
   const likes = myPosts.reduce((total, post) => total + post.likedBy.length, 0);
-  const shown = section === 'posts' ? myPosts : saved;
+  const shown =
+    section === 'posts' ? myPosts : section === 'videos' ? myPosts.filter((post) => post.videoUri) : saved;
 
   return (
     <View style={styles.screen}>
@@ -161,7 +163,9 @@ export default function ProfileScreen() {
         emptyText={
           section === 'posts'
             ? 'Your garage is empty. Post a car from the Post tab.'
-            : 'Nothing saved yet. Tap the bookmark on any post to keep it here.'
+            : section === 'videos'
+              ? 'No videos yet. Pick a video on the Post tab to share one.'
+              : 'Nothing saved yet. Tap the bookmark on any post to keep it here.'
         }
       />
     </ScrollView>

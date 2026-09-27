@@ -58,3 +58,20 @@ export function tokenize(text: string): RichToken[] {
   flush();
   return tokens;
 }
+
+export type TagCount = { tag: string; count: number };
+
+/** Most-used hashtags across these captions (each caption counts a tag once). */
+export function topTags(captions: string[], limit: number): TagCount[] {
+  const counts = new Map<string, number>();
+  for (const caption of captions) {
+    const tags = new Set(
+      tokenize(caption).flatMap((token) => (token.kind === 'tag' ? [token.tag] : []))
+    );
+    tags.forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+  }
+  return [...counts]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, limit);
+}

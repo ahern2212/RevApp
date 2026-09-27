@@ -14,13 +14,14 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Comments** — the car button opens comments; delete your own
 - **Hashtags & mentions** — #tags and @usernames in captions, comments and forum posts are tappable: a tag opens search for it, a mention opens that driver's profile; mentioning someone in a caption or comment notifies them (Activity, toast and push)
 - **Saves** — bookmark any post; private "Saved" section on your profile
+- **Profile tabs** — Posts, Videos and Saved on your own profile
 - **Share** — system share sheet (or copy link on desktop browsers)
 - **Profiles** — tap any username to see that person's garage; edit your username, bio and profile picture
 - **Follow** — follow drivers from their profile; follower/following counts and lists; an Everyone / Following switch at the top of the feed; "started following you" in Activity, the in-app horn toast and push
 - **Report & block** — "…" on any post (and long-press a comment, the flag on forum threads and replies, "Report listing" in the market) to report it with a reason; it disappears for you, and anything 3 people report is hidden for everyone but its owner. Block from a post or a profile: neither of you sees the other's posts, comments, threads, listings or garage, follows end, and they can't like or comment on yours. Manage blocks in Edit profile → Blocked accounts
 - **My Garage** — add your cars (year/make/model, nickname, mods) with a photo of each one
 - **Car pages** — every garage car has its own page (photo, mods, owner) with a build log of the posts it's tagged in; tag one of your cars when posting and the car name in the feed links to it
-- **Search** — magnifier in the feed header finds drivers by username and builds by car or caption
+- **Search** — magnifier in the feed header finds drivers by username and builds by car or caption; before you type, it shows the week's trending #tags
 - **Activity** — heart button in the feed header lists likes, comments, new followers and mentions, with an unread badge
 - **Notifications** — car-horn pop-up while the app is open; push notifications with the horn sound when it's closed (development/store builds only)
 - **Forums** — threads in General, Builds, Tech Help, Meets and Off-Topic, with replies; search, sort (Active / New / Top / Unanswered), "Mine" and category filters

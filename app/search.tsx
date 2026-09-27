@@ -12,11 +12,13 @@ import {
 } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { Chip } from '@/components/Chip';
 import { PostGrid } from '@/components/PostGrid';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
-import { search, type SearchResults } from '@/lib/search';
+import type { TagCount } from '@/lib/richText';
+import { fetchTrendingTags, search, type SearchResults } from '@/lib/search';
 
 const DEBOUNCE_MS = 300;
 
@@ -28,6 +30,17 @@ export default function SearchScreen() {
   const [results, setResults] = useState<(SearchResults & { query: string }) | null>(null);
   const q = query.trim();
   const current = results && results.query === q ? results : null;
+  const [trending, setTrending] = useState<TagCount[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTrendingTags()
+      .then((tags) => !cancelled && setTrending(tags))
+      .catch((error) => console.warn('Failed to load trending tags', error));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const searching = q.length >= 2 && !current;
 
   // Search after the user pauses typing.
@@ -81,7 +94,23 @@ export default function SearchScreen() {
       </View>
 
       {q.length < 2 ? (
-        <Text style={styles.hint}>Type at least 2 letters to search usernames, cars and captions.</Text>
+        <>
+          <Text style={styles.hint}>Type at least 2 letters to search usernames, cars and captions.</Text>
+          {trending && trending.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.heading}>Trending this week</Text>
+              <View style={styles.tags}>
+                {trending.map(({ tag, count }) => (
+                  <Chip
+                    key={tag}
+                    label={`#${tag} · ${count}`}
+                    onPress={() => setQuery(`#${tag}`)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </>
       ) : searching ? (
         <ActivityIndicator color={Colors.light.tint} style={styles.loading} />
       ) : current && current.drivers.length === 0 && current.posts.length === 0 ? (
@@ -171,6 +200,11 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     fontSize: 16,
     fontWeight: '800',
+  },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   driver: {
     flexDirection: 'row',
