@@ -96,6 +96,8 @@ function RootLayoutNav() {
           <Stack.Screen name="forums/[threadId]" options={{ title: 'Thread' }} />
           <Stack.Screen name="garage/edit" options={{ presentation: 'modal', title: 'Garage' }} />
           <Stack.Screen name="themes" options={{ title: 'App colors' }} />
+          <Stack.Screen name="market/new" options={{ presentation: 'modal', title: 'Sell something' }} />
+          <Stack.Screen name="market/[listingId]" options={{ title: 'Listing' }} />
           <Stack.Screen
             name="edit-post/[postId]"
             options={{ presentation: 'modal', title: 'Edit caption' }}

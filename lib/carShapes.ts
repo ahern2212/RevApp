@@ -1,5 +1,5 @@
-// Side-view car silhouettes for the garage render. Pure data + geometry (no React), so the
-// same code draws the app's render and can be previewed/tested outside the app.
+// Side-view car geometry for the garage render (drawing lives in lib/carDrawing.ts).
+// Pure data, no React, so it can be previewed and tested outside the app.
 // Everything faces left in a 320 × 130 box with the ground at y = 118.
 
 export const BODY_STYLES = [
@@ -62,121 +62,177 @@ export const WHEEL_COLORS = [
   { name: 'White', hex: '#f5f5f5' },
 ];
 
-type Box = { x: number; y: number; w: number; h: number };
-type Extra = 'rails' | 'bed' | 'wing' | 'duck' | 'scoop' | 'intake' | 'spare' | 'flares' | 'headrest';
+export type Extra = 'rails' | 'bed' | 'wing' | 'duck' | 'scoop' | 'sideIntake' | 'spare' | 'flares' | 'roadster';
 
 export type Shape = {
   /** Upper outline from the front-bottom corner over the car to the rear (ends at rearX). */
   top: string;
   frontX: number;
   rearX: number;
-  /** Bottom edge of the body. */
+  /** Bottom edge of the body sides. */
   sill: number;
   wheelFront: number;
   wheelRear: number;
   tire: number;
+  /** Highest point of the roof and the window line — used for the paint's shading. */
+  roof: number;
+  belt: number;
   /** Window glass (may contain several sub-paths). */
   glass: string;
-  /** B/C-pillars drawn over the glass. */
-  pillars: number[];
-  door: { x: number; top: number };
-  headlight: Box & { round?: boolean };
-  taillight: Box;
+  /** Door pillars drawn over the glass, as slanted bars (x at the roof → x at the window line). */
+  pillars: { top: number; bottom: number; width?: number }[];
+  doors: number[];
+  handles: number[];
+  mirror: { x: number; y: number } | null;
+  headlight: string;
+  taillight: string;
+  /** Front grille / lower intake. */
+  intake: string;
   extras: Extra[];
+  rim: 'mesh' | 'six';
 };
 
 export const GROUND_Y = 118;
 
 export const SHAPES: Record<BodyStyle, Shape> = {
   coupe: {
-    top: 'M16,90 Q16,78 30,75 L104,66 Q128,40 160,34 L196,34 Q226,36 250,60 L290,66 Q304,68 304,82',
-    frontX: 16, rearX: 304, sill: 100, wheelFront: 72, wheelRear: 248, tire: 22,
-    glass: 'M112,64 Q134,42 162,39 L194,39 Q220,41 240,60 Z',
-    pillars: [178], door: { x: 176, top: 66 },
-    headlight: { x: 18, y: 79, w: 11, h: 5 }, taillight: { x: 295, y: 72, w: 8, h: 7 }, extras: [],
+    top: 'M14,93 C14,85 17,80 27,78 C50,74 82,70 106,67 C122,57 138,45 162,39 C178,36 198,36 212,38 C232,42 250,54 266,61 C280,64 296,66 303,70 C306,74 306,82 306,90',
+    frontX: 14, rearX: 306, sill: 101, wheelFront: 74, wheelRear: 246, tire: 21, roof: 36, belt: 65,
+    glass: 'M114,66 C128,55 144,44 163,41 C180,39 198,39 211,41 C228,45 243,54 255,61 Z',
+    pillars: [{ top: 190, bottom: 186 }],
+    doors: [184], handles: [168], mirror: { x: 114, y: 63 },
+    headlight: 'M17,80 C24,78 34,76 44,75 C46,78 44,81 40,82 L19,86 C17,85 16,83 17,80 Z',
+    taillight: 'M297,68 L305,71 C306,74 306,77 305,79 L295,77 Z',
+    intake: 'M17,92 L44,91 C46,94 45,97 41,98 L22,98 C19,98 17,96 17,92 Z',
+    extras: [], rim: 'mesh',
   },
   sedan: {
-    top: 'M16,90 Q16,78 30,76 L98,68 Q122,44 150,36 L214,36 Q238,40 256,62 L292,66 Q304,68 304,82',
-    frontX: 16, rearX: 304, sill: 100, wheelFront: 72, wheelRear: 248, tire: 22,
-    glass: 'M106,66 Q128,44 152,41 L212,41 Q232,44 246,62 Z',
-    pillars: [178], door: { x: 176, top: 68 },
-    headlight: { x: 18, y: 79, w: 11, h: 5 }, taillight: { x: 295, y: 72, w: 8, h: 7 }, extras: [],
+    top: 'M12,93 C12,85 15,80 25,78 C48,74 78,70 100,68 C116,58 132,45 154,39 C172,36 204,35 222,37 C238,40 252,52 262,60 C278,62 296,63 304,66 C308,70 308,80 308,90',
+    frontX: 12, rearX: 308, sill: 101, wheelFront: 72, wheelRear: 248, tire: 21, roof: 36, belt: 66,
+    glass: 'M108,67 C122,56 138,45 156,42 C174,39 202,39 220,41 C234,44 246,53 254,61 Z',
+    pillars: [{ top: 184, bottom: 180 }],
+    doors: [180, 238], handles: [162, 222], mirror: { x: 108, y: 64 },
+    headlight: 'M15,80 C22,78 32,76 42,75 C44,78 42,81 38,82 L17,86 C15,85 14,83 15,80 Z',
+    taillight: 'M297,63 L307,66 C308,70 308,74 307,76 L296,75 Z',
+    intake: 'M15,92 L42,91 C44,94 43,97 39,98 L20,98 C17,98 15,96 15,92 Z',
+    extras: [], rim: 'mesh',
   },
   hatch: {
-    top: 'M16,90 Q16,78 30,76 L96,68 Q120,42 150,34 L262,34 Q282,36 292,58 L302,74 Q304,78 304,84',
-    frontX: 16, rearX: 304, sill: 100, wheelFront: 72, wheelRear: 248, tire: 22,
-    glass: 'M104,66 Q126,44 152,39 L258,39 Q274,41 284,58 Z',
-    pillars: [178, 236], door: { x: 176, top: 68 },
-    headlight: { x: 18, y: 79, w: 11, h: 5 }, taillight: { x: 296, y: 74, w: 8, h: 7 }, extras: [],
+    top: 'M16,93 C16,85 19,80 29,78 C50,74 78,70 100,68 C116,57 132,44 154,38 C176,34 238,34 256,36 C272,38 284,46 292,56 C298,62 300,70 300,80',
+    frontX: 16, rearX: 300, sill: 101, wheelFront: 74, wheelRear: 242, tire: 21, roof: 35, belt: 65,
+    glass: 'M108,66 C122,55 138,44 156,41 C178,37 236,37 254,39 C268,41 278,49 284,58 Z',
+    pillars: [{ top: 182, bottom: 178 }, { top: 242, bottom: 248, width: 11 }],
+    doors: [178, 236], handles: [160, 220], mirror: { x: 110, y: 63 },
+    headlight: 'M19,80 C26,78 36,76 46,75 C48,78 46,81 42,82 L21,86 C19,85 18,83 19,80 Z',
+    taillight: 'M289,58 L299,62 C300,66 300,70 299,73 L288,71 Z',
+    intake: 'M19,92 L46,91 C48,94 47,97 43,98 L24,98 C21,98 19,96 19,92 Z',
+    extras: [], rim: 'mesh',
   },
   suv: {
-    top: 'M16,86 Q16,70 30,66 L92,60 Q112,26 140,20 L270,20 Q290,22 298,44 L304,62',
-    frontX: 16, rearX: 304, sill: 96, wheelFront: 72, wheelRear: 248, tire: 24,
-    glass: 'M100,58 Q118,28 142,25 L268,25 Q284,27 290,46 L294,56 Z',
-    pillars: [170, 234], door: { x: 168, top: 60 },
-    headlight: { x: 18, y: 72, w: 12, h: 6 }, taillight: { x: 295, y: 64, w: 8, h: 9 }, extras: ['rails'],
+    top: 'M14,89 C14,78 18,70 30,67 C52,63 78,60 96,58 C112,44 126,30 146,24 C168,20 244,20 262,22 C276,24 288,32 294,42 C300,50 302,60 302,72',
+    frontX: 14, rearX: 302, sill: 97, wheelFront: 76, wheelRear: 244, tire: 24, roof: 21, belt: 58,
+    glass: 'M104,57 C118,44 132,31 148,27 C170,24 242,24 260,26 C272,28 282,36 288,46 L290,55 Z',
+    pillars: [{ top: 186, bottom: 182 }, { top: 248, bottom: 254, width: 10 }],
+    doors: [182, 240], handles: [166, 226], mirror: { x: 106, y: 55 },
+    headlight: 'M16,70 C24,68 36,66 46,65 C48,68 46,72 42,73 L18,76 C16,75 15,72 16,70 Z',
+    taillight: 'M291,48 L301,51 C302,57 302,63 301,67 L290,65 Z',
+    intake: 'M16,84 L44,83 C46,87 45,91 41,92 L21,92 C18,92 16,89 16,84 Z',
+    extras: ['rails'], rim: 'six',
   },
   truck: {
-    top: 'M16,90 Q16,76 30,72 L94,64 Q112,34 136,28 L186,28 Q194,28 196,36 L198,62 L304,62',
-    frontX: 16, rearX: 304, sill: 100, wheelFront: 72, wheelRear: 248, tire: 23,
-    glass: 'M102,62 Q118,36 138,33 L188,33 L190,60 Z',
-    pillars: [], door: { x: 150, top: 64 },
-    headlight: { x: 18, y: 76, w: 12, h: 6 }, taillight: { x: 296, y: 66, w: 8, h: 9 }, extras: ['bed'],
+    top: 'M12,90 C12,78 16,70 28,67 C50,64 74,62 92,60 C104,46 116,32 132,26 C144,22 184,22 196,24 C200,26 202,30 202,36 L204,58 L308,58 C308,62 308,70 308,80',
+    frontX: 12, rearX: 308, sill: 97, wheelFront: 72, wheelRear: 250, tire: 24, roof: 23, belt: 60,
+    glass: 'M100,59 C110,46 122,33 134,29 C146,26 182,26 192,28 L194,57 Z',
+    pillars: [{ top: 152, bottom: 148, width: 8 }],
+    doors: [146, 198], handles: [130, 184], mirror: { x: 100, y: 57 },
+    headlight: 'M14,67 L40,65 C42,68 42,72 40,74 L15,76 C14,73 14,70 14,67 Z',
+    taillight: 'M301,60 L308,60 L308,76 L301,76 Z',
+    intake: 'M13,78 L44,76 C46,82 46,88 44,92 L16,92 C14,88 13,83 13,78 Z',
+    extras: ['bed'], rim: 'six',
   },
-  // Porsche 911: rear engine, fender-mounted round headlights, one long fastback curve.
+  // Porsche 911: rear engine, fender-bulge round headlights, one long fastback curve.
   sports: {
-    top: 'M18,92 Q18,82 28,79 Q42,71 62,71 Q86,71 106,68 Q124,46 156,40 Q190,38 214,48 Q256,62 288,74 Q300,77 300,86',
-    frontX: 18, rearX: 300, sill: 101, wheelFront: 74, wheelRear: 234, tire: 22,
-    glass: 'M114,67 Q130,49 156,45 Q182,43 202,50 Q214,55 222,62 Z',
-    pillars: [172], door: { x: 170, top: 68 },
-    headlight: { x: 26, y: 74, w: 14, h: 7, round: true }, taillight: { x: 290, y: 76, w: 9, h: 5 }, extras: ['duck'],
+    top: 'M18,93 C18,86 21,82 30,80 C40,72 52,70 64,70 C84,70 96,69 108,67 C122,55 138,44 160,40 C184,37 204,41 220,49 C244,60 272,70 290,75 C298,78 300,84 300,90',
+    frontX: 18, rearX: 300, sill: 101, wheelFront: 76, wheelRear: 234, tire: 21, roof: 39, belt: 66,
+    glass: 'M116,66 C128,55 142,46 161,43 C180,41 198,44 210,50 C218,55 224,60 228,65 Z',
+    pillars: [{ top: 186, bottom: 182 }],
+    doors: [182], handles: [166], mirror: { x: 118, y: 64 },
+    headlight: 'M30,78 C32,72 44,71 52,74 C52,78 42,81 33,81 C31,80 30,79 30,78 Z',
+    taillight: 'M280,72 L299,78 L299,82 L280,76 Z',
+    intake: 'M21,92 L48,90 C50,93 49,96 45,97 L25,98 C22,98 21,96 21,92 Z',
+    extras: ['duck'], rim: 'mesh',
   },
   // Mustang / Camaro / Challenger: blunt nose, long hood, chopped greenhouse, short deck.
   muscle: {
-    top: 'M14,92 L14,78 Q14,71 22,70 L118,64 Q138,43 168,38 L200,38 Q222,40 244,56 L290,61 Q302,62 304,70',
-    frontX: 14, rearX: 304, sill: 100, wheelFront: 78, wheelRear: 246, tire: 23,
-    glass: 'M126,62 Q144,45 168,42 L198,42 Q216,44 234,56 Z',
-    pillars: [184], door: { x: 180, top: 64 },
-    headlight: { x: 15, y: 75, w: 10, h: 6 }, taillight: { x: 296, y: 66, w: 8, h: 7 }, extras: ['scoop'],
+    top: 'M12,92 L12,80 C12,74 14,71 22,70 C54,67 90,65 118,63 C132,52 146,42 168,39 C182,37 200,37 210,39 C226,43 240,52 250,57 C270,59 292,60 302,62 C307,64 308,70 308,80',
+    frontX: 12, rearX: 308, sill: 100, wheelFront: 78, wheelRear: 248, tire: 22, roof: 38, belt: 63,
+    glass: 'M126,62 C138,52 150,44 169,42 C184,40 200,40 209,42 C222,46 234,53 242,57 Z',
+    pillars: [{ top: 194, bottom: 190 }],
+    doors: [188], handles: [172], mirror: { x: 128, y: 60 },
+    headlight: 'M13,72 L30,71 C31,73 31,76 30,78 L13,79 Z',
+    taillight: 'M298,62 L308,64 L308,73 L298,72 Z',
+    intake: 'M12,80 L40,78 C42,83 42,88 40,92 L14,93 C12,89 12,85 12,80 Z',
+    extras: ['scoop'], rim: 'mesh',
   },
   // Miata / S2000 / Z4: top down — windshield, headrest, flat beltline, short overhangs.
   roadster: {
-    top: 'M24,92 Q24,80 36,77 L118,69 Q140,67 152,66 L232,64 Q264,62 286,68 Q296,70 296,82',
-    frontX: 24, rearX: 296, sill: 100, wheelFront: 76, wheelRear: 238, tire: 21,
-    glass: 'M122,69 L143,48 L149,49 L143,67 Z',
-    pillars: [], door: { x: 160, top: 66 },
-    headlight: { x: 26, y: 79, w: 12, h: 5 }, taillight: { x: 288, y: 72, w: 8, h: 6 }, extras: ['headrest'],
+    top: 'M22,92 C22,84 25,80 34,79 C60,75 96,71 122,69 C138,68 150,67 158,67 C190,66 222,66 246,66 C268,66 286,68 294,72 C298,76 298,84 298,90',
+    frontX: 22, rearX: 298, sill: 100, wheelFront: 78, wheelRear: 238, tire: 20, roof: 50, belt: 68,
+    glass: 'M126,69 C132,62 140,54 147,49 L151,50 C148,56 146,62 146,68 Z',
+    pillars: [],
+    doors: [176], handles: [160], mirror: { x: 130, y: 66 },
+    headlight: 'M24,82 C30,79 42,78 50,79 C50,82 46,84 40,85 L26,86 C24,85 24,83 24,82 Z',
+    taillight: 'M288,70 L297,73 C298,76 298,79 297,80 L287,78 Z',
+    intake: 'M25,92 L50,91 C52,94 51,96 47,97 L29,97 C26,97 25,95 25,92 Z',
+    extras: ['roadster'], rim: 'mesh',
   },
   // Supra / 370Z / RX-7 / GT-R: long hood fastback with a rear wing.
   jdm: {
-    top: 'M18,92 Q18,82 30,78 L112,66 Q132,44 160,38 L190,38 Q214,40 240,56 Q270,64 292,66 Q302,68 302,80',
-    frontX: 18, rearX: 302, sill: 101, wheelFront: 74, wheelRear: 242, tire: 22,
-    glass: 'M120,64 Q138,46 160,42 L188,42 Q206,44 226,56 Z',
-    pillars: [176], door: { x: 174, top: 66 },
-    headlight: { x: 20, y: 80, w: 14, h: 5 }, taillight: { x: 293, y: 70, w: 9, h: 6 }, extras: ['wing'],
+    top: 'M16,93 C16,86 19,82 28,80 C52,76 86,70 112,67 C126,56 140,45 162,40 C178,37 196,38 208,41 C228,46 246,56 262,62 C280,66 296,67 302,70 C304,74 304,82 304,90',
+    frontX: 16, rearX: 304, sill: 101, wheelFront: 76, wheelRear: 244, tire: 21, roof: 39, belt: 65,
+    glass: 'M120,66 C132,55 146,45 163,43 C178,41 194,42 206,45 C222,50 236,57 246,62 Z',
+    pillars: [{ top: 190, bottom: 186 }],
+    doors: [186], handles: [170], mirror: { x: 122, y: 63 },
+    headlight: 'M19,82 C28,79 42,77 54,77 C54,80 50,82 44,83 L21,86 C19,85 18,84 19,82 Z',
+    taillight: 'M291,68 C297,67 303,70 304,74 C304,77 300,78 294,77 C290,75 289,70 291,68 Z',
+    intake: 'M19,92 L46,91 C48,94 47,97 43,98 L24,98 C21,98 19,96 19,92 Z',
+    extras: ['wing'], rim: 'mesh',
   },
   // Mid-engine: wedge nose, cab-forward, long engine deck, side intake before the rear wheel.
   supercar: {
-    top: 'M14,94 Q14,87 24,85 L100,70 Q128,49 158,46 Q186,46 206,56 Q246,64 290,68 Q304,70 306,82',
-    frontX: 14, rearX: 306, sill: 102, wheelFront: 76, wheelRear: 238, tire: 22,
-    glass: 'M108,68 Q130,52 156,50 Q178,50 194,58 Z',
-    pillars: [], door: { x: 168, top: 64 },
-    headlight: { x: 18, y: 84, w: 16, h: 4 }, taillight: { x: 296, y: 72, w: 10, h: 4 }, extras: ['intake'],
+    top: 'M12,96 C12,90 16,87 26,86 C54,82 84,76 104,71 C120,60 136,50 160,47 C180,45 198,48 212,56 C236,62 268,66 292,68 C302,69 308,74 308,84 C308,90 308,94 308,96',
+    frontX: 12, rearX: 308, sill: 104, wheelFront: 76, wheelRear: 240, tire: 21, roof: 47, belt: 72,
+    glass: 'M112,70 C126,60 142,52 160,50 C176,49 190,52 200,58 Z',
+    pillars: [],
+    doors: [], handles: [], mirror: { x: 116, y: 68 },
+    headlight: 'M16,87 C30,84 46,82 60,81 L58,84 C46,86 30,88 18,90 Z',
+    taillight: 'M288,69 L307,74 L307,78 L288,73 Z',
+    intake: 'M15,94 L50,90 C52,94 51,98 47,100 L20,100 C17,100 15,98 15,94 Z',
+    extras: ['sideIntake'], rim: 'mesh',
   },
   // Wrangler / Bronco / G-Class / Defender: upright glass, flat roof, big tires, spare on back.
   offroad: {
-    top: 'M20,84 L20,64 Q20,58 26,58 L96,56 L112,24 Q114,20 120,20 L286,20 Q294,20 294,28 L296,86',
-    frontX: 20, rearX: 296, sill: 94, wheelFront: 80, wheelRear: 232, tire: 26,
-    glass: 'M117,54 L124,26 L168,26 L168,54 Z M176,26 L232,26 L232,54 L176,54 Z M240,26 L284,26 L284,52 L240,52 Z',
-    pillars: [], door: { x: 172, top: 58 },
-    headlight: { x: 22, y: 62, w: 10, h: 10, round: true }, taillight: { x: 289, y: 60, w: 6, h: 12 }, extras: ['rails', 'spare', 'flares'],
+    top: 'M16,86 L16,64 C16,60 18,58 22,58 L96,56 L112,22 C113,19 115,18 118,18 L288,18 C292,18 294,20 294,24 L296,56 L298,60 L298,80',
+    frontX: 16, rearX: 298, sill: 93, wheelFront: 80, wheelRear: 234, tire: 26, roof: 18, belt: 56,
+    glass: 'M118,54 L124,23 L168,23 L168,54 Z M176,23 L230,23 L230,54 L176,54 Z M238,23 L286,23 L288,52 L238,52 Z',
+    pillars: [],
+    doors: [172, 234], handles: [156, 218], mirror: { x: 110, y: 52 },
+    headlight: 'M18,66 C18,61 22,59 26,59 C30,59 33,62 33,66 C33,70 30,73 26,73 C22,73 18,70 18,66 Z',
+    taillight: 'M291,56 L297,56 L297,72 L291,72 Z',
+    intake: 'M16,74 L40,73 L40,86 L16,86 Z',
+    extras: ['rails', 'spare', 'flares'], rim: 'six',
   },
 };
+
+/** Wheel-arch radius (a few units of gap around the tire). */
+export function archRadius(shape: Shape): number {
+  return shape.tire + 5;
+}
 
 /** Full body outline: the shape's top plus a bottom edge with arches cut around the wheels. */
 export function bodyPath(shape: Shape): string {
   const { top, frontX, rearX, sill, wheelFront, wheelRear } = shape;
-  const arch = shape.tire + 5;
+  const arch = archRadius(shape);
   return [
     top,
     `L${rearX},${sill - 6}`,
@@ -193,6 +249,13 @@ export function bodyPath(shape: Shape): string {
 
 export function wheelCenterY(shape: Shape): number {
   return GROUND_Y - shape.tire;
+}
+
+const STANCE_OFFSET: Record<Stance, number> = { stock: 0, lowered: 5, lifted: -7 };
+
+/** How far the body moves down (lowered) or up (lifted); the wheels stay on the ground. */
+export function stanceOffset(stance: Stance): number {
+  return STANCE_OFFSET[stance] ?? 0;
 }
 
 // ─── Picking a shape from the make/model ─────────────────────────────────────
@@ -226,197 +289,4 @@ export function guessBodyStyle(make: string, model: string): BodyStyle | null {
     if (rule.makes && rule.makes.includes(mk)) return rule.style;
   }
   return null;
-}
-
-// ─── Drawing ─────────────────────────────────────────────────────────────────
-
-/** One SVG primitive. `layer` says where it goes; `clip` means "clip to the windows". */
-export type Part = {
-  key: string;
-  tag: 'path' | 'circle' | 'rect' | 'line' | 'ellipse';
-  attrs: Record<string, string | number>;
-  layer: 'shadow' | 'body' | 'wheels';
-  clip?: boolean;
-};
-
-const STANCE_OFFSET: Record<Stance, number> = { stock: 0, lowered: 5, lifted: -7 };
-const DARK = '#1d1a24';
-
-export function stanceOffset(stance: Stance): number {
-  return STANCE_OFFSET[stance] ?? 0;
-}
-
-function wheel(cx: number, cy: number, r: number, color: string, id: string): Part[] {
-  const rim = Math.round(r * 0.68);
-  const parts: Part[] = [
-    { key: `${id}-tire`, tag: 'circle', layer: 'wheels', attrs: { cx, cy, r, fill: DARK } },
-    { key: `${id}-rim`, tag: 'circle', layer: 'wheels', attrs: { cx, cy, r: rim, fill: color } },
-    {
-      key: `${id}-lip`,
-      tag: 'circle',
-      layer: 'wheels',
-      attrs: { cx, cy, r: rim, fill: 'none', stroke: '#000', strokeOpacity: 0.25, strokeWidth: 1.5 },
-    },
-  ];
-  for (const angle of [0, 72, 144, 216, 288]) {
-    const rad = (angle * Math.PI) / 180;
-    parts.push({
-      key: `${id}-spoke${angle}`,
-      tag: 'line',
-      layer: 'wheels',
-      attrs: {
-        x1: cx,
-        y1: cy,
-        x2: +(cx + Math.sin(rad) * (rim - 2)).toFixed(2),
-        y2: +(cy - Math.cos(rad) * (rim - 2)).toFixed(2),
-        stroke: '#000',
-        strokeOpacity: 0.3,
-        strokeWidth: 3,
-        strokeLinecap: 'round',
-      },
-    });
-  }
-  parts.push({ key: `${id}-hub`, tag: 'circle', layer: 'wheels', attrs: { cx, cy, r: 4, fill: '#2a2730' } });
-  return parts;
-}
-
-/** Every primitive needed to draw a car. Body parts should be shifted by `stanceOffset`. */
-export function carParts(style: BodyStyle, paint: string, wheels: string): Part[] {
-  const s = SHAPES[style] ?? SHAPES.coupe;
-  const body = bodyPath(s);
-  const cy = wheelCenterY(s);
-  const archR = s.tire + 4;
-  const has = (extra: Extra) => s.extras.includes(extra);
-  const parts: Part[] = [
-    {
-      key: 'shadow',
-      tag: 'ellipse',
-      layer: 'shadow',
-      attrs: { cx: 160, cy: GROUND_Y + 1, rx: 146, ry: 6, fill: '#000', opacity: 0.16 },
-    },
-    // Dark wheel wells show through the arch cut-outs.
-    { key: 'well-f', tag: 'circle', layer: 'body', attrs: { cx: s.wheelFront, cy: cy + 2, r: archR, fill: '#15131a' } },
-    { key: 'well-r', tag: 'circle', layer: 'body', attrs: { cx: s.wheelRear, cy: cy + 2, r: archR, fill: '#15131a' } },
-  ];
-
-  if (has('rails')) {
-    parts.push({
-      key: 'rails',
-      tag: 'rect',
-      layer: 'body',
-      attrs: { x: s.wheelFront + 70, y: 14, width: 120, height: 4, rx: 2, fill: '#2a2730' },
-    });
-  }
-  if (has('spare')) {
-    parts.push(
-      { key: 'spare', tag: 'circle', layer: 'body', attrs: { cx: s.rearX + 4, cy: 58, r: 17, fill: DARK } },
-      { key: 'spare-rim', tag: 'circle', layer: 'body', attrs: { cx: s.rearX + 4, cy: 58, r: 9, fill: wheels } }
-    );
-  }
-  if (has('wing')) {
-    const blade = 'M258,50 L304,47 L304,52 L258,54 Z';
-    parts.push(
-      { key: 'wing-post1', tag: 'rect', layer: 'body', attrs: { x: 268, y: 52, width: 3, height: 14, fill: DARK } },
-      { key: 'wing-post2', tag: 'rect', layer: 'body', attrs: { x: 288, y: 52, width: 3, height: 14, fill: DARK } },
-      { key: 'wing', tag: 'path', layer: 'body', attrs: { d: blade, fill: paint } },
-      {
-        key: 'wing-edge',
-        tag: 'path',
-        layer: 'body',
-        attrs: { d: blade, fill: 'none', stroke: '#000', strokeOpacity: 0.25, strokeWidth: 1 },
-      }
-    );
-  }
-
-  parts.push(
-    { key: 'paint', tag: 'path', layer: 'body', attrs: { d: body, fill: paint } },
-    { key: 'shade', tag: 'path', layer: 'body', attrs: { d: body, fill: 'url(#carShade)' } },
-    {
-      key: 'outline',
-      tag: 'path',
-      layer: 'body',
-      attrs: { d: body, fill: 'none', stroke: '#000', strokeOpacity: 0.18, strokeWidth: 1 },
-    }
-  );
-
-  if (has('flares')) {
-    for (const [id, x] of [['f', s.wheelFront], ['r', s.wheelRear]] as const) {
-      const r = archR + 2;
-      parts.push({
-        key: `flare-${id}`,
-        tag: 'path',
-        layer: 'body',
-        attrs: { d: `M${x + r},${s.sill} A${r},${r} 0 0 0 ${x - r},${s.sill}`, fill: 'none', stroke: '#2a2730', strokeWidth: 5 },
-      });
-    }
-  }
-  if (has('scoop')) {
-    parts.push({ key: 'scoop', tag: 'path', layer: 'body', attrs: { d: 'M70,69 Q84,61 102,66 Z', fill: DARK, opacity: 0.85 } });
-  }
-  if (has('duck')) {
-    parts.push({
-      key: 'duck',
-      tag: 'path',
-      layer: 'body',
-      attrs: { d: 'M266,66 L296,74 L297,70 Z', fill: paint, stroke: '#000', strokeOpacity: 0.2, strokeWidth: 1 },
-    });
-  }
-  if (has('intake')) {
-    parts.push({ key: 'intake', tag: 'path', layer: 'body', attrs: { d: 'M196,90 Q212,72 234,74 L230,92 Z', fill: DARK, opacity: 0.85 } });
-  }
-  if (has('bed')) {
-    parts.push({
-      key: 'bed',
-      tag: 'line',
-      layer: 'body',
-      attrs: { x1: 198, y1: 68, x2: s.rearX, y2: 68, stroke: '#000', strokeOpacity: 0.25, strokeWidth: 1.5 },
-    });
-  }
-  if (has('headrest')) {
-    parts.push(
-      { key: 'cockpit', tag: 'path', layer: 'body', attrs: { d: 'M150,66 Q190,60 226,64', fill: 'none', stroke: DARK, strokeWidth: 2.5 } },
-      { key: 'headrest', tag: 'path', layer: 'body', attrs: { d: 'M178,63 Q178,49 188,49 Q198,49 198,63 Z', fill: '#2a2730' } }
-    );
-  }
-
-  parts.push(
-    { key: 'glass', tag: 'path', layer: 'body', attrs: { d: s.glass, fill: '#2d3a4f', opacity: 0.9 } },
-    { key: 'glass-tint', tag: 'path', layer: 'body', attrs: { d: s.glass, fill: '#a0d2eb', opacity: 0.25 } }
-  );
-  for (const x of s.pillars) {
-    parts.push({ key: `pillar-${x}`, tag: 'rect', layer: 'body', clip: true, attrs: { x, y: 10, width: 6, height: 70, fill: paint } });
-  }
-
-  // Door seam and handle.
-  parts.push(
-    {
-      key: 'door',
-      tag: 'line',
-      layer: 'body',
-      attrs: { x1: s.door.x, y1: s.door.top, x2: s.door.x, y2: s.sill - 4, stroke: '#000', strokeOpacity: 0.18, strokeWidth: 1 },
-    },
-    {
-      key: 'handle',
-      tag: 'rect',
-      layer: 'body',
-      attrs: { x: s.door.x + 10, y: s.door.top + 7, width: 12, height: 3, rx: 1.5, fill: '#000', opacity: 0.25 },
-    }
-  );
-
-  const h = s.headlight;
-  const t = s.taillight;
-  parts.push(
-    h.round
-      ? {
-          key: 'headlight',
-          tag: 'ellipse',
-          layer: 'body',
-          attrs: { cx: h.x + h.w / 2, cy: h.y + h.h / 2, rx: h.w / 2, ry: h.h / 2, fill: '#fff6c8' },
-        }
-      : { key: 'headlight', tag: 'rect', layer: 'body', attrs: { x: h.x, y: h.y, width: h.w, height: h.h, rx: 2, fill: '#fff6c8' } },
-    { key: 'taillight', tag: 'rect', layer: 'body', attrs: { x: t.x, y: t.y, width: t.w, height: t.h, rx: 2, fill: '#d7263d' } }
-  );
-
-  parts.push(...wheel(s.wheelFront, cy, s.tire, wheels, 'wf'), ...wheel(s.wheelRear, cy, s.tire, wheels, 'wr'));
-  return parts;
 }

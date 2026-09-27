@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { GoingCars } from '@/components/GoingCars';
 import { TileMap } from '@/components/TileMap';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
@@ -193,6 +194,8 @@ export default function EventScreen() {
       ) : (
         <Text style={styles.muted}>Be the first to say you’re going.</Text>
       )}
+
+      <GoingCars ownerIds={event.goingIds} onOpenProfile={(id) => openProfile(id)} />
 
       {isHost ? (
         <Pressable onPress={remove} accessibilityRole="button" style={styles.delete}>

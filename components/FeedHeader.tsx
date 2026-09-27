@@ -141,10 +141,10 @@ export function FeedHeader() {
       <View style={[styles.inner, { paddingTop: top + 10 }]}>
         <View style={styles.brandBlock}>
           <Text style={styles.brand} accessibilityRole="header">
-            REVAPP
+            RevApp
           </Text>
           <Text style={styles.tagline} numberOfLines={1}>
-            Fresh builds from the community
+             Lets see the builds
           </Text>
         </View>
         <View style={styles.buttons}>

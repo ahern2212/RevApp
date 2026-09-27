@@ -77,6 +77,18 @@ export async function fetchCars(ownerId: string): Promise<Car[]> {
   return (data as CarRow[]).map(toCar);
 }
 
+/** Every car owned by any of these users (e.g. everyone going to a meet). */
+export async function fetchCarsForOwners(ownerIds: string[]): Promise<Car[]> {
+  if (ownerIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('cars')
+    .select(CAR_SELECT)
+    .in('owner_id', ownerIds)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data as CarRow[]).map(toCar);
+}
+
 export async function fetchCar(carId: string): Promise<Car | null> {
   const { data, error } = await supabase.from('cars').select(CAR_SELECT).eq('id', carId).maybeSingle();
   if (error) throw error;

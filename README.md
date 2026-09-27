@@ -18,16 +18,17 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Activity** — heart button in the feed header lists likes and comments on your posts, with an unread badge
 - **Notifications** — car-horn pop-up while the app is open; push notifications with the horn sound when it's closed (development/store builds only)
 - **Forums** — threads in General, Builds, Tech Help, Meets and Off-Topic, with replies; search, sort (Active / New / Top / Unanswered), "Mine" and category filters
-- **Marketplace** — placeholder tab
+- **Market** — buy and sell cars, parts, wheels and accessories: 2-column glass grid with price badges, search, category chips, price sorting, sold items; listing pages with seller card and contact line; sellers mark items sold or delete them
+- **About** — story, features, community guidelines and a feedback shortcut
 - **App colors** — five full palettes previewed live; voting for one also switches your device to it (the app restarts to repaint). The app-wide default is `DEFAULT_THEME_ID` in `constants/Colors.ts`
 - **Glass UI** — frosted translucent cards over soft theme-colored glows; real blur on the tab bar, notification banner and menus
-- **Events** — car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions
+- **Events** — car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions, and see the garage cars of everyone going
 
 ## Project layout
 
 | Path | What's there |
 | --- | --- |
-| `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Post, Profile; `comments/` (post page), `user/`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes` are stacked screens |
+| `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Forums, Post, Market, About, Profile; `comments/` (post page), `user/`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes`, `market/new`, `market/[id]` are stacked screens |
 | `components/` | UI pieces: `GarageTabBar` (raised center Post button), `CarRender`, `GarageSection`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache) |
 | `lib/` | Data + helpers: `supabase`, `posts`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |

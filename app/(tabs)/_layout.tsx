@@ -45,19 +45,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="post"
-        options={{
-          title: 'Post',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'plus.square', android: 'add_box', web: 'add_box' }}
-              tintColor={color}
-              size={26}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="forums"
         options={{
           title: 'Forums',
@@ -72,12 +59,40 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="post"
+        options={{
+          title: 'Post',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'plus.square', android: 'add_box', web: 'add_box' }}
+              tintColor={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="market"
         options={{
           title: 'Market',
+          headerShown: false, // has its own hero header
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'storefront', android: 'storefront', web: 'storefront' }}
+              tintColor={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="about"
+        options={{
+          title: 'About',
+          headerShown: false, // full-bleed page with its own title
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'info.circle', android: 'info', web: 'info' }}
               tintColor={color}
               size={26}
             />
