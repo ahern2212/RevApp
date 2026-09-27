@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import { isMissingFollows } from '@/lib/follows';
@@ -75,6 +75,9 @@ export function GarageProvider({ children }: { children: ReactNode }) {
   // Which user + feed mode has finished its first load; the feed shows a spinner until it matches.
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [followingUnavailable, setFollowingUnavailable] = useState(false);
+  // Bumped when the feed mode changes, so a refresh or "load more" that was still in flight
+  // for the old feed doesn't land in the new one.
+  const feedGeneration = useRef(0);
   const [saved, setSaved] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -95,13 +98,19 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     else setFeedError(true);
   }, []);
 
-  const setFeedMode = useCallback((mode: FeedMode) => {
-    setFeedModeState(mode);
-    setPosts([]);
-    setPage({ cursor: null, hasMore: false });
-    setFeedError(false);
-    setFollowingUnavailable(false);
-  }, []);
+  const setFeedMode = useCallback(
+    (mode: FeedMode) => {
+      // Re-selecting the current feed must not clear it: nothing would reload it.
+      if (mode === feedMode) return;
+      feedGeneration.current += 1;
+      setFeedModeState(mode);
+      setPosts([]);
+      setPage({ cursor: null, hasMore: false });
+      setFeedError(false);
+      setFollowingUnavailable(false);
+    },
+    [feedMode]
+  );
 
   useEffect(() => {
     if (!userId || !feedKey) return;
@@ -137,10 +146,13 @@ export function GarageProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
+    const generation = feedGeneration.current;
     try {
       const [first, nextSaved] = await Promise.allSettled([fetchFeedPage(null, feedMode), fetchSaved()]);
-      if (first.status === 'fulfilled') applyFirstPage(first.value);
-      else failFeed(first.reason);
+      if (generation === feedGeneration.current) {
+        if (first.status === 'fulfilled') applyFirstPage(first.value);
+        else failFeed(first.reason);
+      }
       if (nextSaved.status === 'fulfilled') setSaved(nextSaved.value);
       else console.warn('Failed to load saved posts', nextSaved.reason);
     } finally {
@@ -151,8 +163,10 @@ export function GarageProvider({ children }: { children: ReactNode }) {
   const loadMore = useCallback(async () => {
     if (!page.hasMore || loadingMore || refreshing) return;
     setLoadingMore(true);
+    const generation = feedGeneration.current;
     try {
       const next = await fetchFeedPage(page.cursor, feedMode);
+      if (generation !== feedGeneration.current) return;
       setPosts((current) => {
         const seen = new Set(current.map((post) => post.id));
         return [...current, ...next.posts.filter((post) => !seen.has(post.id))];
