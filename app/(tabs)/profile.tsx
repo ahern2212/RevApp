@@ -20,7 +20,7 @@ export default function ProfileScreen() {
         </View>
       </View>
       <Pressable onPress={signOut} style={styles.signOut}>
-        <Text style={styles.signOutText}>Switch account</Text>
+        <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
       <View style={styles.grid}>
         {mine.map((post) => (
@@ -37,7 +37,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: Colors.light.background,
   },
   content: {
     padding: 16,
@@ -55,35 +55,35 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#2a1512',
+    backgroundColor: Colors.light.avatar,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: {
-    color: Colors.dark.tint,
+    color: Colors.light.tint,
     fontSize: 28,
     fontWeight: '800',
   },
   name: {
-    color: Colors.dark.text,
+    color: Colors.light.text,
     fontSize: 24,
     fontWeight: '800',
   },
   meta: {
-    color: Colors.dark.muted,
+    color: Colors.light.muted,
     marginTop: 4,
   },
   signOut: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: Colors.light.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
     marginBottom: 20,
   },
   signOutText: {
-    color: Colors.dark.text,
+    color: Colors.light.text,
     fontWeight: '600',
   },
   grid: {
@@ -94,10 +94,10 @@ const styles = StyleSheet.create({
   tile: {
     width: '32%',
     aspectRatio: 1,
-    backgroundColor: Colors.dark.card,
+    backgroundColor: Colors.light.card,
   },
   empty: {
-    color: Colors.dark.muted,
+    color: Colors.light.muted,
     marginTop: 24,
     lineHeight: 22,
   },

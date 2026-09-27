@@ -1,136 +1,163 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import type { Post, User } from '@/types';
 
-const USER_KEY = 'garage.user';
-const POSTS_KEY = 'garage.posts';
+const BUCKET = 'post-images';
+const FEED_LIMIT = 100;
 
-const seedPosts: Post[] = [
-  {
-    id: 'seed-1',
-    authorId: 'demo-maya',
-    authorName: 'maya',
-    imageUri:
-      'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&q=80',
-    caption: 'Night drive downtown. Exhaust note was illegal in three counties.',
-    car: '1994 Mazda MX-5',
-    createdAt: Date.now() - 1000 * 60 * 40,
-    likedBy: ['demo-kai'],
-  },
-  {
-    id: 'seed-2',
-    authorId: 'demo-kai',
-    authorName: 'kai',
-    imageUri:
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=80',
-    caption: 'Fresh wash. Still chasing that perfect stance.',
-    car: 'Porsche 911',
-    createdAt: Date.now() - 1000 * 60 * 60 * 6,
-    likedBy: ['demo-maya', 'demo-rio'],
-  },
-  {
-    id: 'seed-3',
-    authorId: 'demo-rio',
-    authorName: 'rio',
-    imageUri:
-      'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=1200&q=80',
-    caption: 'Sunday morning. No agenda except miles.',
-    car: 'Toyota Supra',
-    createdAt: Date.now() - 1000 * 60 * 60 * 22,
-    likedBy: [],
-  },
-];
+// posts → profiles has two paths (author_id and via likes), so name the FK explicitly.
+const POST_SELECT =
+  'id, author_id, image_path, car, caption, created_at, author:profiles!posts_author_id_fkey(username), likes(user_id)';
+
+type PostRow = {
+  id: string;
+  author_id: string;
+  image_path: string;
+  car: string;
+  caption: string;
+  created_at: string;
+  author: { username: string } | null;
+  likes: { user_id: string }[];
+};
+
+type NewPost = { imageUri: string; mimeType?: string; caption: string; car: string };
 
 type GarageContextValue = {
   ready: boolean;
   user: User | null;
   posts: Post[];
-  signIn: (username: string) => Promise<void>;
+  refreshing: boolean;
+  refresh: () => Promise<void>;
   signOut: () => Promise<void>;
-  addPost: (input: { imageUri: string; caption: string; car: string }) => Promise<void>;
+  addPost: (input: NewPost) => Promise<void>;
   toggleLike: (postId: string) => Promise<void>;
 };
 
 const GarageContext = createContext<GarageContextValue | null>(null);
 
-function newId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+function toPost(row: PostRow): Post {
+  return {
+    id: row.id,
+    authorId: row.author_id,
+    authorName: row.author?.username ?? 'driver',
+    imageUri: supabase.storage.from(BUCKET).getPublicUrl(row.image_path).data.publicUrl,
+    caption: row.caption,
+    car: row.car,
+    createdAt: Date.parse(row.created_at),
+    likedBy: row.likes.map((like) => like.user_id),
+  };
+}
+
+async function fetchPosts(): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .order('created_at', { ascending: false })
+    .limit(FEED_LIMIT);
+  if (error) throw error;
+  return (data as unknown as PostRow[]).map(toPost);
+}
+
+function setLiked(posts: Post[], postId: string, userId: string, liked: boolean): Post[] {
+  return posts.map((post) => {
+    if (post.id !== postId) return post;
+    const others = post.likedBy.filter((id) => id !== userId);
+    return { ...post, likedBy: liked ? [...others, userId] : others };
+  });
 }
 
 export function GarageProvider({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [posts, setPosts] = useState<Post[]>(seedPosts);
+  const { user, isLoading, signOut } = useAuth();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const userId = user?.id;
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [rawUser, rawPosts] = await Promise.all([
-          AsyncStorage.getItem(USER_KEY),
-          AsyncStorage.getItem(POSTS_KEY),
-        ]);
-        if (rawUser) setUser(JSON.parse(rawUser) as User);
-        if (rawPosts) {
-          const parsed = JSON.parse(rawPosts) as Post[];
-          if (Array.isArray(parsed) && parsed.length > 0) setPosts(parsed);
-        }
-      } finally {
-        setReady(true);
-      }
-    })();
+    if (!userId) return;
+    let cancelled = false;
+    fetchPosts()
+      .then((next) => {
+        if (!cancelled) setPosts(next);
+      })
+      .catch((error) => console.warn('Failed to load posts', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      setPosts(await fetchPosts());
+    } catch (error) {
+      console.warn('Failed to load posts', error);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (!ready) return;
-    AsyncStorage.setItem(POSTS_KEY, JSON.stringify(posts)).catch(() => {});
-  }, [posts, ready]);
+  const addPost = useCallback(
+    async (input: NewPost) => {
+      if (!userId) throw new Error('You need to be signed in to post.');
 
-  const signIn = async (username: string) => {
-    const next: User = { id: newId(), username: username.trim().toLowerCase() };
-    setUser(next);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(next));
-  };
+      const contentType = input.mimeType ?? 'image/jpeg';
+      const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-  const signOut = async () => {
-    setUser(null);
-    await AsyncStorage.removeItem(USER_KEY);
-  };
+      const body = await (await fetch(input.imageUri)).arrayBuffer();
+      const upload = await supabase.storage.from(BUCKET).upload(path, body, { contentType });
+      if (upload.error) throw upload.error;
 
-  const addPost = async (input: { imageUri: string; caption: string; car: string }) => {
-    if (!user) return;
-    const post: Post = {
-      id: newId(),
-      authorId: user.id,
-      authorName: user.username,
-      imageUri: input.imageUri,
-      caption: input.caption.trim(),
-      car: input.car.trim(),
-      createdAt: Date.now(),
-      likedBy: [],
-    };
-    setPosts((current) => [post, ...current]);
-  };
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({ image_path: path, car: input.car.trim(), caption: input.caption.trim() })
+        .select(POST_SELECT)
+        .single();
+      if (error) {
+        await supabase.storage.from(BUCKET).remove([path]);
+        throw error;
+      }
 
-  const toggleLike = async (postId: string) => {
-    if (!user) return;
-    setPosts((current) =>
-      current.map((post) => {
-        if (post.id !== postId) return post;
-        const liked = post.likedBy.includes(user.id);
-        return {
-          ...post,
-          likedBy: liked
-            ? post.likedBy.filter((id) => id !== user.id)
-            : [...post.likedBy, user.id],
-        };
-      })
-    );
-  };
+      const post = toPost(data as unknown as PostRow);
+      setPosts((current) => [post, ...current]);
+    },
+    [userId]
+  );
+
+  const toggleLike = useCallback(
+    async (postId: string) => {
+      if (!userId) return;
+      const liked = posts.find((post) => post.id === postId)?.likedBy.includes(userId) ?? false;
+
+      // Optimistic update; roll back if the write fails.
+      setPosts((current) => setLiked(current, postId, userId, !liked));
+      const { error } = liked
+        ? await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', userId)
+        : await supabase
+            .from('likes')
+            .upsert({ post_id: postId, user_id: userId }, { ignoreDuplicates: true });
+      if (error) {
+        console.warn('Failed to update like', error);
+        setPosts((current) => setLiked(current, postId, userId, liked));
+      }
+    },
+    [posts, userId]
+  );
 
   const value = useMemo(
-    () => ({ ready, user, posts, signIn, signOut, addPost, toggleLike }),
-    [ready, user, posts]
+    () => ({
+      ready: !isLoading,
+      user,
+      posts,
+      refreshing,
+      refresh,
+      signOut,
+      addPost,
+      toggleLike,
+    }),
+    [isLoading, user, posts, refreshing, refresh, signOut, addPost, toggleLike]
   );
 
   return <GarageContext.Provider value={value}>{children}</GarageContext.Provider>;

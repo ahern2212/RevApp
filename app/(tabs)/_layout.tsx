@@ -1,21 +1,33 @@
-import { SymbolView } from 'expo-symbols';
+import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
+import { StyleSheet } from 'react-native';
 
-import Colors from '@/constants/Colors';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import Colors from '@/constants/Colors';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.dark.tint,
-        tabBarInactiveTintColor: Colors.dark.tabIconDefault,
+        tabBarActiveTintColor: Colors.light.tint,
+        tabBarInactiveTintColor: Colors.light.tabIconDefault,
         tabBarStyle: {
-          backgroundColor: Colors.dark.background,
-          borderTopColor: Colors.dark.border,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopColor: Colors.light.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 0,
         },
-        headerStyle: { backgroundColor: Colors.dark.background },
-        headerTintColor: Colors.dark.text,
+        tabBarBackground: () => (
+          <BlurView
+            intensity={80}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+          />
+        ),
+        headerStyle: { backgroundColor: Colors.light.background },
+        headerTintColor: Colors.light.text,
         headerTitleStyle: { fontWeight: '800' },
         headerShown: useClientOnlyValue(false, true),
       }}>

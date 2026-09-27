@@ -38,10 +38,10 @@ export function PostCard({ post, liked, onLike }: Props) {
         <Pressable onPress={onLike} hitSlop={8} style={styles.likeButton}>
           <SymbolView
             name={{ ios: liked ? 'heart.fill' : 'heart', android: 'favorite', web: 'favorite' }}
-            tintColor={liked ? Colors.dark.tint : Colors.dark.text}
+            tintColor={liked ? Colors.light.tint : Colors.light.text}
             size={26}
           />
-          <Text style={[styles.likeCount, liked && { color: Colors.dark.tint }]}>
+          <Text style={[styles.likeCount, liked && { color: Colors.light.tint }]}>
             {post.likedBy.length}
           </Text>
         </Pressable>
@@ -58,9 +58,9 @@ export function PostCard({ post, liked, onLike }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.dark.card,
+    backgroundColor: Colors.light.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.dark.border,
+    borderBottomColor: Colors.light.border,
     paddingBottom: 16,
     marginBottom: 8,
   },
@@ -75,27 +75,27 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#2a1512',
+    backgroundColor: Colors.light.avatar,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: {
-    color: Colors.dark.tint,
+    color: Colors.light.tint,
     fontWeight: '700',
   },
   username: {
-    color: Colors.dark.text,
+    color: Colors.light.text,
     fontWeight: '700',
   },
   meta: {
-    color: Colors.dark.muted,
+    color: Colors.light.muted,
     fontSize: 12,
     marginTop: 2,
   },
   photo: {
     width: '100%',
     aspectRatio: 4 / 5,
-    backgroundColor: '#111',
+    backgroundColor: Colors.light.imagePlaceholder,
   },
   actions: {
     paddingHorizontal: 14,
@@ -107,11 +107,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   likeCount: {
-    color: Colors.dark.text,
+    color: Colors.light.text,
     fontWeight: '600',
   },
   caption: {
-    color: Colors.dark.text,
+    color: Colors.light.text,
     paddingHorizontal: 14,
     paddingTop: 8,
     lineHeight: 20,

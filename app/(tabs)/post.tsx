@@ -11,6 +11,7 @@ export default function PostScreen() {
   const { addPost } = useGarage();
   const router = useRouter();
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [mimeType, setMimeType] = useState<string | undefined>();
   const [car, setCar] = useState('');
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
@@ -22,6 +23,7 @@ export default function PostScreen() {
     });
     if (!result.canceled) {
       setImageUri(result.assets[0].uri);
+      setMimeType(result.assets[0].mimeType);
     }
   };
 
@@ -32,11 +34,14 @@ export default function PostScreen() {
     }
     setBusy(true);
     try {
-      await addPost({ imageUri, caption, car });
+      await addPost({ imageUri, mimeType, caption, car });
       setImageUri(null);
+      setMimeType(undefined);
       setCar('');
       setCaption('');
       router.replace('/');
+    } catch (error) {
+      Alert.alert('Could not share', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       setBusy(false);
     }
@@ -55,19 +60,21 @@ export default function PostScreen() {
         value={car}
         onChangeText={setCar}
         placeholder="Car (e.g. 2018 Civic Type R)"
-        placeholderTextColor={Colors.dark.muted}
+        maxLength={80}
+        placeholderTextColor={Colors.light.placeholder}
         style={styles.input}
       />
       <TextInput
         value={caption}
         onChangeText={setCaption}
         placeholder="Caption"
-        placeholderTextColor={Colors.dark.muted}
+        maxLength={2200}
+        placeholderTextColor={Colors.light.placeholder}
         multiline
         style={[styles.input, styles.caption]}
       />
       <Pressable style={[styles.button, busy && { opacity: 0.5 }]} disabled={busy} onPress={share}>
-        <Text style={styles.buttonText}>Share</Text>
+        <Text style={styles.buttonText}>{busy ? 'Sharing…' : 'Share'}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -76,7 +83,7 @@ export default function PostScreen() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: Colors.light.background,
   },
   content: {
     padding: 16,
@@ -86,9 +93,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   picker: {
-    backgroundColor: Colors.dark.card,
+    backgroundColor: Colors.light.card,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: Colors.light.border,
     borderRadius: 16,
     overflow: 'hidden',
     minHeight: 280,
@@ -96,7 +103,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pickerText: {
-    color: Colors.dark.muted,
+    color: Colors.light.muted,
     fontSize: 16,
   },
   preview: {
@@ -105,9 +112,9 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: Colors.dark.border,
-    backgroundColor: Colors.dark.card,
-    color: Colors.dark.text,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+    color: Colors.light.text,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -118,14 +125,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   button: {
-    backgroundColor: Colors.dark.tint,
+    backgroundColor: Colors.light.tint,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: Colors.light.onTint,
     fontWeight: '800',
     fontSize: 16,
   },

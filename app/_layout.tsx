@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { View } from 'react-native';
@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 
 import { SetupScreen } from '@/components/SetupScreen';
 import Colors from '@/constants/Colors';
+import { AuthProvider } from '@/context/AuthContext';
 import { GarageProvider, useGarage } from '@/context/GarageContext';
 
 export { ErrorBoundary } from 'expo-router';
@@ -16,6 +17,18 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+const navTheme: Theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: Colors.light.tint,
+    background: Colors.light.background,
+    card: Colors.light.background,
+    text: Colors.light.text,
+    border: Colors.light.border,
+  },
+};
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -37,9 +50,11 @@ export default function RootLayout() {
   }
 
   return (
-    <GarageProvider>
-      <RootLayoutNav />
-    </GarageProvider>
+    <AuthProvider>
+      <GarageProvider>
+        <RootLayoutNav />
+      </GarageProvider>
+    </AuthProvider>
   );
 }
 
@@ -47,7 +62,7 @@ function RootLayoutNav() {
   const { ready, user } = useGarage();
 
   if (!ready) {
-    return <View style={{ flex: 1, backgroundColor: Colors.dark.background }} />;
+    return <View style={{ flex: 1, backgroundColor: Colors.light.background }} />;
   }
 
   if (!user) {
@@ -55,7 +70,7 @@ function RootLayoutNav() {
   }
 
   return (
-    <ThemeProvider value={DarkTheme}>
+    <ThemeProvider value={navTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
