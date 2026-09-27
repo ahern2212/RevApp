@@ -399,3 +399,73 @@ test('deleting an account removes the person everywhere', async () => {
     0
   );
 });
+
+test('reports hide comments, listings, threads and replies after 3', async () => {
+  const { alice, bob, carol, dave } = users;
+  const reporters = [alice, bob, carol];
+  const target = await post(dave);
+  const [comment] = await as(dave, () => q(`insert into comments (post_id, body) values ($1, 'hmm') returning id`, [target]));
+  const [listing] = await as(dave, () =>
+    q(`insert into listings (title, price, category, photo_path) values ('Wheels', 100, 'Wheels & Tires', $1) returning id`, [
+      photo(dave),
+    ])
+  );
+  const [thread] = await as(dave, () =>
+    q(`insert into forum_threads (category, title) values ('General', 'Help') returning id`)
+  );
+  const [reply] = await as(dave, () =>
+    q(`insert into forum_replies (thread_id, body) values ($1, 'bump') returning id`, [thread.id])
+  );
+  const cases: [string, string, string][] = [
+    ['comment_id', 'comments', comment.id],
+    ['listing_id', 'listings', listing.id],
+    ['thread_id', 'forum_threads', thread.id],
+    ['reply_id', 'forum_replies', reply.id],
+  ];
+  for (const [column, table, id] of cases) {
+    for (const reporter of reporters) {
+      await as(reporter, () => q(`insert into reports (${column}, reason) values ($1, 'Spam')`, [id]));
+    }
+    assert.equal(
+      await count(`select count(*) as n from ${table} where id = $1 and hidden_at is not null`, [id]),
+      1,
+      `${table}: hidden after 3 reports`
+    );
+    assert.equal((await as(dave, () => q(`select id from ${table} where id = $1`, [id]))).length, 1, `${table}: owner`);
+  }
+});
+
+test('forum replies need a visible thread; notifications from blocked people disappear', async () => {
+  const { alice, bob, carol } = users;
+  const [thread] = await as(bob, () => q(`insert into forum_threads (category, title) values ('Builds', 'My car') returning id`));
+  assert.ok(
+    await fails(() => as(carol, () => q(`insert into forum_replies (thread_id, body) values ($1, 'hi')`, [thread.id]))),
+    'carol and bob blocked each other'
+  );
+  assert.equal(
+    await fails(() => as(alice, () => q(`insert into forum_replies (thread_id, body) values ($1, 'nice')`, [thread.id]))),
+    null
+  );
+
+  const alicePost = await post(alice);
+  await as(carol, () => q(`insert into likes (post_id) values ($1)`, [alicePost]));
+  const before = (await as(alice, () => q(`select * from notifications where actor_id = $1`, [carol]))).length;
+  assert.ok(before > 0, 'alice sees carol\'s like');
+  await as(alice, () => q(`insert into blocks (blocked_id) values ($1)`, [carol]));
+  assert.equal((await as(alice, () => q(`select * from notifications where actor_id = $1`, [carol]))).length, 0);
+  await as(alice, () => q(`delete from blocks where blocked_id = $1`, [carol]));
+  assert.equal(
+    (await as(alice, () => q(`select * from notifications where actor_id = $1`, [carol]))).length,
+    before,
+    'unblocking brings them back'
+  );
+});
+
+test('avatars: images only, in your own folder', async () => {
+  const { alice, bob } = users;
+  const upload = (name: string) =>
+    fails(() => as(alice, () => q(`insert into storage.objects (bucket_id, name) values ('avatars', $1)`, [name])));
+  assert.equal(await upload(`${alice}/avatar-1.jpg`), null);
+  assert.ok(await upload(`${alice}/avatar-1.svg`));
+  assert.ok(await upload(`${bob}/avatar-1.jpg`));
+});
