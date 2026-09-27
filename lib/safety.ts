@@ -17,7 +17,8 @@ export type ReportTarget =
   | { kind: 'comment'; id: string }
   | { kind: 'listing'; id: string }
   | { kind: 'thread'; id: string }
-  | { kind: 'reply'; id: string };
+  | { kind: 'reply'; id: string }
+  | { kind: 'message'; id: string };
 
 const TARGET_COLUMNS: Record<ReportTarget['kind'], string> = {
   post: 'post_id',
@@ -25,6 +26,7 @@ const TARGET_COLUMNS: Record<ReportTarget['kind'], string> = {
   listing: 'listing_id',
   thread: 'thread_id',
   reply: 'reply_id',
+  message: 'message_id',
 };
 
 export const TARGET_LABELS: Record<ReportTarget['kind'], string> = {
@@ -33,6 +35,7 @@ export const TARGET_LABELS: Record<ReportTarget['kind'], string> = {
   listing: 'listing',
   thread: 'thread',
   reply: 'reply',
+  message: 'message',
 };
 
 // Missing table / column: the report-and-block migration hasn't been run yet.

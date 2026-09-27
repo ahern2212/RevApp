@@ -16,6 +16,7 @@ import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
 import { showError } from '@/lib/confirm';
 import { fetchFollowCounts, follow, type FollowCounts, isFollowing, unfollow } from '@/lib/follows';
+import { startConversation } from '@/lib/messages';
 import { fetchUserPosts } from '@/lib/posts';
 import { hasBlocked, unblockUser } from '@/lib/safety';
 import type { Post } from '@/types';
@@ -103,6 +104,15 @@ export default function UserProfileScreen() {
     }
   };
 
+  const message = async () => {
+    try {
+      const conversationId = await startConversation(userId);
+      router.push({ pathname: '/messages/[conversationId]', params: { conversationId, name: username } });
+    } catch (error) {
+      showError('Could not open chat', error);
+    }
+  };
+
   const openList = (listName: 'followers' | 'following') =>
     router.push({ pathname: '/follows/[userId]', params: { userId, name: username, list: listName } });
 
@@ -148,6 +158,13 @@ export default function UserProfileScreen() {
             ) : (
               <View style={styles.spacer} />
             )}
+            <Pressable
+              onPress={message}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.messageButton, pressed && styles.pressed]}>
+              <Ionicons name="paper-plane-outline" size={16} color={Colors.light.tint} />
+              <Text style={styles.followingText}>Message</Text>
+            </Pressable>
             <Pressable
               onPress={() => setMenuOpen(true)}
               accessibilityRole="button"
@@ -256,6 +273,15 @@ const styles = StyleSheet.create({
   },
   followingText: {
     color: Colors.light.tint,
+  },
+  messageButton: {
+    ...glass,
+    shadowOpacity: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 12,
+    paddingHorizontal: 14,
   },
   more: {
     ...glass,

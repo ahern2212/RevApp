@@ -12,6 +12,7 @@ import { useReportSheet } from '@/components/SafetyActions';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
 import { CATEGORY_ICONS, deleteListing, fetchListing, formatPrice, type Listing, setListingSold } from '@/lib/listings';
+import { startConversation } from '@/lib/messages';
 import { timeAgo } from '@/lib/time';
 
 export default function ListingScreen() {
@@ -112,6 +113,30 @@ export default function ListingScreen() {
           </View>
           {listing.description ? <Text style={styles.description}>{listing.description}</Text> : null}
         </View>
+
+        {!mine ? (
+          <Pressable
+            onPress={async () => {
+              try {
+                const conversationId = await startConversation(listing.sellerId);
+                router.push({
+                  pathname: '/messages/[conversationId]',
+                  params: {
+                    conversationId,
+                    name: listing.sellerName,
+                    draft: listing.sold ? '' : `Hi! Is your “${listing.title}” still available?`,
+                  },
+                });
+              } catch (error) {
+                showError('Could not open chat', error);
+              }
+            }}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
+            <Ionicons name="paper-plane" size={18} color={Colors.light.onTint} />
+            <Text style={styles.primaryText}>Message seller</Text>
+          </Pressable>
+        ) : null}
 
         {listing.contact ? (
           <View style={styles.card}>

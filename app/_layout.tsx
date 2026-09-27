@@ -14,6 +14,7 @@ import { ActivityProvider } from '@/context/ActivityContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProfilesProvider } from '@/context/ProfilesContext';
 import { GarageProvider, useGarage } from '@/context/GarageContext';
+import { MessagesProvider } from '@/context/MessagesContext';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -80,6 +81,7 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={navTheme}>
       <ActivityProvider>
+        <MessagesProvider>
         <Stack screenOptions={{ headerTitleStyle: { fontWeight: '800' }, headerBackTitle: 'Back' }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
@@ -106,9 +108,12 @@ function RootLayoutNav() {
           <Stack.Screen name="user/[userId]" options={{ title: 'Profile' }} />
           <Stack.Screen name="follows/[userId]" options={{ title: 'Drivers' }} />
           <Stack.Screen name="blocked" options={{ title: 'Blocked accounts' }} />
+          <Stack.Screen name="inbox" options={{ title: 'Messages' }} />
+          <Stack.Screen name="messages/[conversationId]" options={{ title: 'Chat' }} />
         </Stack>
         <NotificationToaster />
         <PushNotifications />
+        </MessagesProvider>
       </ActivityProvider>
     </ThemeProvider>
   );

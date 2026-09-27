@@ -17,14 +17,18 @@ export function PushNotifications() {
 
   useEffect(
     () =>
-      onPushOpened((target) =>
-        'postId' in target
-          ? router.push({ pathname: '/comments/[postId]', params: { postId: target.postId } })
-          : router.push({
-              pathname: '/user/[userId]',
-              params: { userId: target.userId, ...(target.username ? { name: target.username } : {}) },
-            })
-      ),
+      onPushOpened((target) => {
+        if ('postId' in target) {
+          router.push({ pathname: '/comments/[postId]', params: { postId: target.postId } });
+        } else if ('conversationId' in target) {
+          router.push({ pathname: '/messages/[conversationId]', params: { conversationId: target.conversationId } });
+        } else {
+          router.push({
+            pathname: '/user/[userId]',
+            params: { userId: target.userId, ...(target.username ? { name: target.username } : {}) },
+          });
+        }
+      }),
     [router]
   );
 
