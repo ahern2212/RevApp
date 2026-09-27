@@ -11,6 +11,10 @@ export type ThemeColors = {
   placeholder: string;
   background: string;
   card: string;
+  /** Solid surface for floating elements (banners, round buttons). */
+  surface: string;
+  /** Bright hairline edge on frosted-glass cards. */
+  glassBorder: string;
   border: string;
   tint: string;
   onTint: string;
@@ -60,7 +64,9 @@ export const THEMES: AppTheme[] = [
       muted: '#6e5560',
       placeholder: '#a28089',
       background: '#e5eaf5',
-      card: 'rgba(255, 255, 255, 0.7)',
+      card: 'rgba(255, 255, 255, 0.55)',
+      surface: '#ffffff',
+      glassBorder: 'rgba(255, 255, 255, 0.85)',
       border: 'rgba(132, 88, 179, 0.2)',
       tint: '#8458B3',
       onTint: '#ffffff',
@@ -98,7 +104,9 @@ export const THEMES: AppTheme[] = [
       muted: '#7a4e62',
       placeholder: '#b08a98',
       background: '#fff4ec',
-      card: 'rgba(255, 255, 255, 0.75)',
+      card: 'rgba(255, 255, 255, 0.6)',
+      surface: '#ffffff',
+      glassBorder: 'rgba(255, 255, 255, 0.85)',
       border: 'rgba(199, 67, 42, 0.2)',
       tint: '#c7432a',
       onTint: '#ffffff',
@@ -136,7 +144,9 @@ export const THEMES: AppTheme[] = [
       muted: '#4f5f55',
       placeholder: '#8a9a8e',
       background: '#f3efe0',
-      card: 'rgba(255, 253, 246, 0.8)',
+      card: 'rgba(255, 253, 246, 0.6)',
+      surface: '#fffdf6',
+      glassBorder: 'rgba(255, 255, 255, 0.85)',
       border: 'rgba(15, 77, 50, 0.2)',
       tint: '#0f4d32',
       onTint: '#ffffff',
@@ -174,7 +184,9 @@ export const THEMES: AppTheme[] = [
       muted: '#4a5a63',
       placeholder: '#8aa0ab',
       background: '#eaf7fd',
-      card: 'rgba(255, 255, 255, 0.8)',
+      card: 'rgba(255, 255, 255, 0.6)',
+      surface: '#ffffff',
+      glassBorder: 'rgba(255, 255, 255, 0.9)',
       border: 'rgba(27, 27, 27, 0.14)',
       tint: '#f58025',
       onTint: '#1b1b1b',
@@ -212,7 +224,9 @@ export const THEMES: AppTheme[] = [
       muted: '#b8a9d9',
       placeholder: '#7d6fa3',
       background: '#0d0221',
-      card: 'rgba(38, 64, 139, 0.25)',
+      card: 'rgba(38, 64, 139, 0.28)',
+      surface: '#1a0f3a',
+      glassBorder: 'rgba(255, 255, 255, 0.14)',
       border: 'rgba(45, 226, 230, 0.2)',
       tint: '#ff3cac',
       onTint: '#0d0221',
@@ -240,7 +254,3 @@ export const THEMES: AppTheme[] = [
     },
   },
 ];
-
-export function themeById(id: string): AppTheme | undefined {
-  return THEMES.find((theme) => theme.id === id);
-}

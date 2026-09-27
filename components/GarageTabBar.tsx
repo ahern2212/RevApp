@@ -6,7 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-import Colors, { art } from '@/constants/Colors';
+import Colors, { activeTheme, art } from '@/constants/Colors';
 
 const BAR_HEIGHT = 58;
 const POST_SIZE = 62;
@@ -57,7 +57,7 @@ export function GarageTabBar({ state, descriptors, navigation }: BottomTabBarPro
 
   return (
     <View style={[styles.bar, { height: BAR_HEIGHT + bottom, paddingBottom: bottom }]}>
-      <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+      <BlurView intensity={80} tint={activeTheme.dark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
       <View style={styles.side}>{left.map(renderTab)}</View>
       {postRoute ? (
         <PostButton
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.light.border,
-    backgroundColor: 'rgba(229, 234, 245, 0.55)',
+    backgroundColor: activeTheme.dark ? 'rgba(13, 2, 33, 0.6)' : 'rgba(255, 255, 255, 0.35)',
   },
   side: {
     flex: 1,

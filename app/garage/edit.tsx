@@ -14,15 +14,11 @@ import {
 } from 'react-native';
 
 import { CarDetailsInput } from '@/components/CarDetailsInput';
-import {
-  BODY_STYLE_LABELS,
-  BODY_STYLES,
-  CarRender,
-  PAINT_COLORS,
-  STANCES,
-  WHEEL_COLORS,
-} from '@/components/CarRender';
+import { CarRender } from '@/components/CarRender';
+import { Chip } from '@/components/Chip';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
 import {
   type Car,
@@ -33,6 +29,14 @@ import {
   NICKNAME_MAX,
   saveCar,
 } from '@/lib/cars';
+import {
+  BODY_STYLE_LABELS,
+  BODY_STYLES,
+  guessBodyStyle,
+  PAINT_COLORS,
+  STANCES,
+  WHEEL_COLORS,
+} from '@/lib/carShapes';
 import { confirm, showError } from '@/lib/confirm';
 
 const BLANK: CarInput = {
@@ -62,19 +66,9 @@ function Chips<T extends string>({
 }) {
   return (
     <View style={styles.chips}>
-      {options.map((option) => {
-        const active = option === value;
-        return (
-          <Pressable
-            key={option}
-            onPress={() => onChange(option)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            style={[styles.chip, active && styles.chipActive]}>
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{label(option)}</Text>
-          </Pressable>
-        );
-      })}
+      {options.map((option) => (
+        <Chip key={option} label={label(option)} active={option === value} onPress={() => onChange(option)} />
+      ))}
     </View>
   );
 }
@@ -116,6 +110,8 @@ export default function EditCarScreen() {
   const [form, setForm] = useState<CarInput | null>(null);
   const [photo, setPhoto] = useState<Photo | 'remove' | undefined>();
   const [busy, setBusy] = useState(false);
+  // New cars get a shape matched from the make/model until the user picks one themselves.
+  const [styleTouched, setStyleTouched] = useState(!!carId);
 
   const car = carId && existing?.id === carId ? existing.car : undefined;
   const loading = !!carId && existing?.id !== carId;
@@ -181,8 +177,10 @@ export default function EditCarScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.wrap}
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
+      style={styles.list}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets>
@@ -220,7 +218,10 @@ export default function EditCarScreen() {
       <Text style={styles.label}>Car</Text>
       <CarDetailsInput
         value={{ year: values.year, make: values.make, model: values.model }}
-        onChange={(details) => update(details)}
+        onChange={(details) => {
+          const guess = styleTouched ? null : guessBodyStyle(details.make, details.model);
+          update(guess ? { ...details, bodyStyle: guess } : details);
+        }}
       />
       <TextInput
         value={values.nickname}
@@ -237,8 +238,17 @@ export default function EditCarScreen() {
         options={BODY_STYLES}
         value={values.bodyStyle}
         label={(style) => BODY_STYLE_LABELS[style]}
-        onChange={(bodyStyle) => update({ bodyStyle })}
+        onChange={(bodyStyle) => {
+          setStyleTouched(true);
+          update({ bodyStyle });
+        }}
       />
+      {!styleTouched && guessBodyStyle(values.make, values.model) ? (
+        <Text style={styles.autoHint}>
+          Matched to {BODY_STYLE_LABELS[values.bodyStyle]} from {values.make} {values.model} — tap a style to
+          change it.
+        </Text>
+      ) : null}
 
       <Text style={styles.label}>Paint</Text>
       <Swatches colors={PAINT_COLORS} value={values.paint} onChange={(paint) => update({ paint })} />
@@ -281,13 +291,21 @@ export default function EditCarScreen() {
         </Pressable>
       ) : null}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   loading: {
     marginTop: 48,
@@ -307,6 +325,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
     paddingHorizontal: 16,
     paddingVertical: 20,
+  },
+  autoHint: {
+    color: Colors.light.muted,
+    fontSize: 12,
+    marginTop: -2,
   },
   label: {
     color: Colors.light.text,
@@ -345,9 +368,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
+    ...glass,
+    shadowOpacity: 0,
     color: Colors.light.text,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -362,24 +384,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: Colors.light.tint,
-    backgroundColor: Colors.light.card,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  chipActive: {
-    backgroundColor: Colors.light.tint,
-  },
-  chipText: {
-    color: Colors.light.tint,
-    fontWeight: '700',
-  },
-  chipTextActive: {
-    color: Colors.light.onTint,
   },
   swatches: {
     flexDirection: 'row',

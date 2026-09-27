@@ -1,3 +1,4 @@
+import { isValidHandle } from '@/lib/handles';
 import { supabase } from '@/lib/supabase';
 
 export const AVATAR_BUCKET = 'avatars';
@@ -74,6 +75,25 @@ export async function updateMyProfile(current: Profile, update: ProfileUpdate): 
     await supabase.storage.from(AVATAR_BUCKET).remove([current.avatarPath]);
   }
   return toProfile(data as ProfileRow);
+}
+
+/** Changes the signed-in user's username. Throws a readable error if it's invalid or taken. */
+export async function updateUsername(userId: string, username: string): Promise<void> {
+  if (!isValidHandle(username)) {
+    throw new Error('Use 2–30 lowercase letters, numbers, dots or underscores.');
+  }
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ username })
+    .eq('id', userId)
+    .select('id');
+  if (error?.code === '23505') throw new Error(`@${username} is already taken. Try another.`);
+  if (error) throw error;
+  if (!data?.length) {
+    throw new Error('Username changes need the latest database update (run the SQL migration).');
+  }
+  // Keep sign-up metadata in step (used only as a fallback before the profile loads).
+  await supabase.auth.updateUser({ data: { username } }).catch(() => {});
 }
 
 async function removeFolder(bucket: string, folder: string): Promise<void> {

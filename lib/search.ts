@@ -10,13 +10,13 @@ export type SearchResults = { drivers: Driver[]; posts: Post[] };
 
 // Keep only characters that are safe inside a PostgREST filter string
 // (commas, parentheses and wildcards would change the query's meaning).
-function clean(query: string): string {
+export function cleanSearchQuery(query: string): string {
   return query.replace(/[^\p{L}\p{N}\s._-]/gu, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /** Drivers whose username matches, and posts whose car or caption matches. */
 export async function search(query: string): Promise<SearchResults> {
-  const q = clean(query);
+  const q = cleanSearchQuery(query);
   if (q.length < 2) return { drivers: [], posts: [] };
 
   const [drivers, posts] = await Promise.all([

@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontStyle: 'italic',
     letterSpacing: 3,
-    textShadowColor: '#ffffff',
+    textShadowColor: Colors.light.surface,
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
   },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionLight: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.light.surface,
     borderColor: Colors.light.tint,
   },
   buttons: {

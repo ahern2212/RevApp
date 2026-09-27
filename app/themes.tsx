@@ -4,10 +4,13 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ThemePreview } from '@/components/ThemePreview';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors, { activeTheme } from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { type AppTheme, THEMES } from '@/constants/themes';
 import { useGarage } from '@/context/GarageContext';
 import { showError } from '@/lib/confirm';
+import { reloadApp, saveThemeId } from '@/lib/themeStore';
 import { castThemeVote, fetchThemeTally, type ThemeTally, withdrawThemeVote } from '@/lib/themeVotes';
 
 export default function ThemesScreen() {
@@ -16,6 +19,7 @@ export default function ThemesScreen() {
   const [tally, setTally] = useState<ThemeTally | null>(null);
   const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  const [applying, setApplying] = useState<AppTheme | null>(null);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -56,8 +60,25 @@ export default function ThemesScreen() {
     });
     setSaving(theme.id);
     try {
-      if (withdrawing) await withdrawThemeVote(userId);
-      else await castThemeVote(userId, theme.id);
+      if (withdrawing) {
+        await withdrawThemeVote(userId);
+      } else {
+        await castThemeVote(userId, theme.id);
+        // Voting also switches this device to the theme (app restarts to repaint).
+        if (theme.id !== activeTheme.id) {
+          saveThemeId(theme.id);
+          setApplying(theme);
+          setTimeout(() => {
+            if (!reloadApp()) {
+              setApplying(null);
+              showError(
+                'Theme saved',
+                new Error(`Close and reopen RevApp to see ${theme.name}.`)
+              );
+            }
+          }, 600);
+        }
+      }
     } catch (error) {
       setTally(previous);
       showError('Could not save your vote', error);
@@ -66,10 +87,24 @@ export default function ThemesScreen() {
     }
   };
 
+  if (applying) {
+    return (
+      <View style={[styles.applying, { backgroundColor: applying.colors.background }]}>
+        <ActivityIndicator color={applying.colors.tint} size="large" />
+        <Text style={[styles.applyingText, { color: applying.colors.text }]}>
+          Switching to {applying.name}…
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView style={styles.list} contentContainerStyle={styles.content}>
       <Text style={styles.intro}>
-        Help pick RevApp’s look. Vote for your favorite palette — you can change your vote any time.
+        Vote for your favorite palette — RevApp switches to it on your device right away, and the
+        most popular one can become the look for everyone. Change your vote any time.
       </Text>
 
       {failed ? (
@@ -127,7 +162,7 @@ export default function ThemesScreen() {
                   color={mine ? Colors.light.onTint : Colors.light.tint}
                 />
                 <Text style={[styles.voteText, mine && styles.voteTextMine]}>
-                  {mine ? 'Your vote' : 'Vote'}
+                  {mine ? 'Your vote' : current ? 'Vote' : 'Vote & use'}
                 </Text>
               </Pressable>
             </View>
@@ -139,13 +174,21 @@ export default function ThemesScreen() {
         The palette with the most votes can be switched on for everyone in a single update.
       </Text>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -154,6 +197,16 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     width: '100%',
     alignSelf: 'center',
+  },
+  applying: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+  },
+  applyingText: {
+    fontSize: 17,
+    fontWeight: '800',
   },
   intro: {
     color: Colors.light.text,
@@ -176,9 +229,7 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 12,
     borderRadius: 16,
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    ...glass,
   },
   cardMine: {
     borderColor: Colors.light.tint,

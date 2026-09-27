@@ -1,9 +1,11 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Chip } from '@/components/Chip';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { showError } from '@/lib/confirm';
 import {
   CATEGORY_ICONS,
@@ -35,31 +37,24 @@ export default function NewThreadScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.wrap}
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
+      style={styles.list}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets>
       <Text style={styles.label}>Category</Text>
       <View style={styles.chips}>
-        {FORUM_CATEGORIES.map((c) => {
-          const active = c === category;
-          return (
-            <Pressable
-              key={c}
-              onPress={() => setCategory(c)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              style={[styles.chip, active && styles.chipActive]}>
-              <Ionicons
-                name={CATEGORY_ICONS[c]}
-                size={14}
-                color={active ? Colors.light.onTint : Colors.light.tint}
-              />
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{c}</Text>
-            </Pressable>
-          );
-        })}
+        {FORUM_CATEGORIES.map((c) => (
+          <Chip
+            key={c}
+            label={c}
+            icon={CATEGORY_ICONS[c]}
+            active={c === category}
+            onPress={() => setCategory(c)}
+          />
+        ))}
       </View>
 
       <Text style={styles.label}>Title</Text>
@@ -94,13 +89,21 @@ export default function NewThreadScreen() {
         <Text style={styles.buttonText}>{busy ? 'Posting…' : 'Post thread'}</Text>
       </Pressable>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -120,31 +123,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderWidth: 1,
-    borderColor: Colors.light.tint,
-    backgroundColor: Colors.light.card,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  chipActive: {
-    backgroundColor: Colors.light.tint,
-  },
-  chipText: {
-    color: Colors.light.tint,
-    fontWeight: '700',
-  },
-  chipTextActive: {
-    color: Colors.light.onTint,
-  },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
+    ...glass,
+    shadowOpacity: 0,
     color: Colors.light.text,
     borderRadius: 12,
     paddingHorizontal: 16,

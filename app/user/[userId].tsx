@@ -6,6 +6,7 @@ import { Avatar } from '@/components/Avatar';
 import { GarageSection } from '@/components/GarageSection';
 import { PostGrid } from '@/components/PostGrid';
 import { useProfile } from '@/context/ProfilesContext';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { fetchUserPosts } from '@/lib/posts';
 import type { Post } from '@/types';
@@ -33,7 +34,9 @@ export default function UserProfileScreen() {
   }, [userId]);
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView style={styles.list} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: username }} />
       <View style={styles.header}>
         <Avatar name={username} userId={userId} size={72} />
@@ -54,13 +57,21 @@ export default function UserProfileScreen() {
         <ActivityIndicator color={Colors.light.tint} style={styles.loading} />
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     padding: 16,

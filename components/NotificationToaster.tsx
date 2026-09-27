@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAudioPlayer } from 'expo-audio';
+import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -7,6 +8,7 @@ import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
+import { blurTint } from '@/constants/glass';
 import { useActivity } from '@/context/ActivityContext';
 import { describeActivity } from '@/lib/activity';
 
@@ -51,6 +53,7 @@ export function NotificationToaster() {
         accessibilityLiveRegion="polite"
         accessibilityLabel={`${text}. Open post`}
         style={({ pressed }) => [styles.toast, pressed && styles.pressed]}>
+        <BlurView intensity={60} tint={blurTint} style={StyleSheet.absoluteFill} />
         <View style={styles.icon}>
           <Ionicons name="car-sport" size={20} color={Colors.light.onTint} />
         </View>
@@ -77,10 +80,11 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
     maxWidth: 520,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
+    backgroundColor: Colors.light.card,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: Colors.light.glassBorder,
+    overflow: 'hidden',
     paddingVertical: 12,
     paddingHorizontal: 14,
     shadowColor: Colors.light.text,

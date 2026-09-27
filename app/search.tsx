@@ -13,7 +13,9 @@ import {
 
 import { Avatar } from '@/components/Avatar';
 import { PostGrid } from '@/components/PostGrid';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { search, type SearchResults } from '@/lib/search';
 
 const DEBOUNCE_MS = 300;
@@ -45,8 +47,10 @@ export default function SearchScreen() {
   }, [q]);
 
   return (
-    <ScrollView
-      style={styles.wrap}
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
+      style={styles.list}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled">
       <View style={styles.searchBar}>
@@ -112,13 +116,21 @@ export default function SearchScreen() {
         </>
       ) : null}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -131,9 +143,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
+    ...glass,
     borderRadius: 12,
     paddingHorizontal: 12,
   },

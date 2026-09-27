@@ -1,17 +1,22 @@
+import { readSavedThemeId } from '@/lib/themeStore';
+
 import { type AppTheme, THEMES } from './themes';
 
-// ▶ To switch the whole app to another theme (e.g. the community vote winner), change this id.
+// ▶ The default theme for everyone (e.g. switch to the community vote winner here).
 //   Options: 'purple90s' | 'sunsetDrive' | 'racingGreen' | 'gulfLivery' | 'midnightNeon'.
-//   ('midnightNeon' is dark: also set "userInterfaceStyle": "dark" in app.json.)
-const ACTIVE_THEME_ID: AppTheme['id'] = 'purple90s';
+export const DEFAULT_THEME_ID: AppTheme['id'] = 'purple90s';
 
-export const activeTheme: AppTheme = THEMES.find((t) => t.id === ACTIVE_THEME_ID) ?? THEMES[0];
+// A user's own pick (made by voting on the App colors screen) overrides the default on
+// their device. It's read once at startup — picking a theme restarts the app.
+const savedId = readSavedThemeId();
+
+export const activeTheme: AppTheme =
+  THEMES.find((t) => t.id === savedId) ?? THEMES.find((t) => t.id === DEFAULT_THEME_ID) ?? THEMES[0];
 
 /** Illustration colors for the active theme (feed banner, avatars, Post button). */
 export const art = activeTheme.art;
 
-// The app is single-theme at runtime; both keys point at it so Themed components work.
+/** UI colors for the active theme. (Kept under `light` so existing `Colors.light.x` reads work.) */
 export default {
   light: activeTheme.colors,
-  dark: activeTheme.colors,
 };

@@ -1,4 +1,4 @@
-import type { BodyStyle, Stance } from '@/components/CarRender';
+import type { BodyStyle, Stance } from '@/lib/carShapes';
 import { BUCKET } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 

@@ -1,6 +1,7 @@
 import { useFonts } from 'expo-font';
 import { DefaultTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
@@ -8,7 +9,7 @@ import 'react-native-reanimated';
 import { NotificationToaster } from '@/components/NotificationToaster';
 import { PushNotifications } from '@/components/PushNotifications';
 import { SetupScreen } from '@/components/SetupScreen';
-import Colors from '@/constants/Colors';
+import Colors, { activeTheme } from '@/constants/Colors';
 import { ActivityProvider } from '@/context/ActivityContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProfilesProvider } from '@/context/ProfilesContext';
@@ -55,6 +56,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <StatusBar style={activeTheme.dark ? 'light' : 'dark'} />
       <GarageProvider>
         <ProfilesProvider>
           <RootLayoutNav />

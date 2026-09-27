@@ -1,3 +1,4 @@
+import { cleanSearchQuery } from '@/lib/search';
 import { supabase } from '@/lib/supabase';
 
 // Must match the check constraint in supabase/migrations/20260927100000_forums.sql.
@@ -78,15 +79,53 @@ function toReply(row: ReplyRow): ForumReply {
   };
 }
 
-/** Most recently active threads, optionally in one category. */
-export async function fetchThreads(category?: ForumCategory | null): Promise<ForumThread[]> {
-  let query = supabase
-    .from('forum_threads')
-    .select(THREAD_SELECT)
-    .order('last_activity_at', { ascending: false })
-    .limit(THREAD_LIMIT);
-  if (category) query = query.eq('category', category);
+export const THREAD_SORTS = ['active', 'new', 'top', 'unanswered'] as const;
+export type ThreadSort = (typeof THREAD_SORTS)[number];
+export const SORT_LABELS: Record<ThreadSort, string> = {
+  active: 'Active',
+  new: 'New',
+  top: 'Top',
+  unanswered: 'Unanswered',
+};
+
+export type ThreadFilters = {
+  category: ForumCategory | null;
+  sort: ThreadSort;
+  search: string;
+  /** Only threads started by this user. */
+  authorId: string | null;
+};
+
+/** Threads matching the filters (category, text search, author) in the chosen order. */
+export async function fetchThreads(filters: ThreadFilters): Promise<ForumThread[]> {
+  let query = supabase.from('forum_threads').select(THREAD_SELECT).limit(THREAD_LIMIT);
+  if (filters.category) query = query.eq('category', filters.category);
+  if (filters.authorId) query = query.eq('author_id', filters.authorId);
+
+  const q = cleanSearchQuery(filters.search);
+  if (q.length >= 2) query = query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
+
+  switch (filters.sort) {
+    case 'new':
+      query = query.order('created_at', { ascending: false });
+      break;
+    case 'top':
+      // reply_count comes from the forum-sorting migration.
+      query = query
+        .order('reply_count', { ascending: false })
+        .order('last_activity_at', { ascending: false });
+      break;
+    case 'unanswered':
+      query = query.eq('reply_count', 0).order('created_at', { ascending: false });
+      break;
+    default:
+      query = query.order('last_activity_at', { ascending: false });
+  }
+
   const { data, error } = await query;
+  if (error?.code === '42703') {
+    throw new Error('Top and Unanswered need the latest database update (run the SQL migration).');
+  }
   if (error) throw error;
   return (data as unknown as ThreadRow[]).map(toThread);
 }

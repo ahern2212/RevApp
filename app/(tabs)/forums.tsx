@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -9,44 +9,77 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { Chip } from '@/components/Chip';
 import Colors from '@/constants/Colors';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
+import { glass } from '@/constants/glass';
+import { useGarage } from '@/context/GarageContext';
 import {
   CATEGORY_ICONS,
+  fetchThreads,
   FORUM_CATEGORIES,
   type ForumCategory,
   type ForumThread,
-  fetchThreads,
+  SORT_LABELS,
+  THREAD_SORTS,
+  type ThreadFilters,
+  type ThreadSort,
 } from '@/lib/forums';
 import { useTabBarSpace } from '@/lib/layout';
 import { timeAgo } from '@/lib/time';
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export default function ForumsScreen() {
   const router = useRouter();
+  const { user } = useGarage();
   const tabBarSpace = useTabBarSpace();
   const { top } = useSafeAreaInsets();
   const [category, setCategory] = useState<ForumCategory | null>(null);
-  const [threads, setThreads] = useState<{ category: ForumCategory | null; list: ForumThread[] } | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [sort, setSort] = useState<ThreadSort>('active');
+  const [mine, setMine] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [search, setSearch] = useState(''); // debounced copy of searchText
+  const [threads, setThreads] = useState<{ key: string; list: ForumThread[] } | null>(null);
+  const [error, setError] = useState<{ key: string; message: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const list = threads && threads.category === category ? threads.list : null;
+
+  const filters: ThreadFilters = {
+    category,
+    sort,
+    search,
+    authorId: mine ? (user?.id ?? null) : null,
+  };
+  const key = JSON.stringify(filters);
+  const list = threads?.key === key ? threads.list : null;
+  const failed = error?.key === key ? error.message : null;
+  const filtered = !!category || mine || search.trim().length >= 2 || sort === 'unanswered';
+
+  // Search once the user pauses typing.
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchText), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const load = useCallback(async () => {
+    const current: ThreadFilters = JSON.parse(key);
     try {
-      setThreads({ category, list: await fetchThreads(category) });
-      setFailed(false);
-    } catch (error) {
-      console.warn('Failed to load threads', error);
-      setFailed(true);
-      setThreads({ category, list: [] });
+      setThreads({ key, list: await fetchThreads(current) });
+      setError(null);
+    } catch (err) {
+      console.warn('Failed to load threads', err);
+      setError({ key, message: err instanceof Error ? err.message : 'Couldn’t load the forums.' });
+      setThreads({ key, list: [] });
     }
-  }, [category]);
+  }, [key]);
 
-  // Reload on every visit and whenever the category changes.
+  // Reload on every visit and whenever a filter changes.
   useFocusEffect(
     useCallback(() => {
       load();
@@ -57,6 +90,14 @@ export default function ForumsScreen() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  };
+
+  const clearFilters = () => {
+    setCategory(null);
+    setMine(false);
+    setSearchText('');
+    setSearch('');
+    if (sort === 'unanswered') setSort('active');
   };
 
   const header = (
@@ -74,38 +115,89 @@ export default function ForumsScreen() {
           <Text style={styles.newText}>New thread</Text>
         </Pressable>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-        {[null, ...FORUM_CATEGORIES].map((c) => {
-          const active = c === category;
+
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={18} color={Colors.light.muted} />
+        <TextInput
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Search threads (e.g. coilovers, misfire)"
+          placeholderTextColor={Colors.light.placeholder}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          accessibilityLabel="Search threads"
+          style={styles.searchInput}
+        />
+        {searchText ? (
+          <Pressable
+            onPress={() => setSearchText('')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search">
+            <Ionicons name="close-circle" size={18} color={Colors.light.muted} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      <View style={styles.sorts} accessibilityRole="tablist">
+        {THREAD_SORTS.map((option) => {
+          const active = option === sort;
           return (
             <Pressable
-              key={c ?? 'all'}
-              onPress={() => setCategory(c)}
-              accessibilityRole="button"
+              key={option}
+              onPress={() => setSort(option)}
+              accessibilityRole="tab"
               accessibilityState={{ selected: active }}
-              style={[styles.chip, active && styles.chipActive]}>
-              {c ? (
-                <Ionicons
-                  name={CATEGORY_ICONS[c]}
-                  size={14}
-                  color={active ? Colors.light.onTint : Colors.light.tint}
-                />
-              ) : null}
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{c ?? 'All'}</Text>
+              style={[styles.sort, active && styles.sortActive]}>
+              <Text style={[styles.sortText, active && styles.sortTextActive]}>
+                {SORT_LABELS[option]}
+              </Text>
             </Pressable>
           );
         })}
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        <Chip label="Mine" icon="person-outline" active={mine} onPress={() => setMine((value) => !value)} />
+        <View style={styles.chipDivider} />
+        {[null, ...FORUM_CATEGORIES].map((c) => (
+          <Chip
+            key={c ?? 'all'}
+            label={c ?? 'All'}
+            icon={c ? CATEGORY_ICONS[c] : undefined}
+            active={c === category}
+            onPress={() => setCategory(c)}
+          />
+        ))}
       </ScrollView>
+
+      {list && filtered ? (
+        <View style={styles.summary}>
+          <Text style={styles.summaryText} numberOfLines={1}>
+            {list.length} {list.length === 1 ? 'thread' : 'threads'}
+            {category ? ` in ${category}` : ''}
+            {mine ? ' by you' : ''}
+            {search.trim().length >= 2 ? ` matching “${search.trim()}”` : ''}
+          </Text>
+          <Text style={styles.clear} onPress={clearFilters} accessibilityRole="button">
+            Clear
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 
   return (
-    <FlatList
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <FlatList
       style={styles.wrap}
       contentContainerStyle={[styles.content, { paddingTop: top + 16, paddingBottom: tabBarSpace }]}
       data={list ?? []}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={header}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.tint} />
       }
@@ -115,15 +207,19 @@ export default function ForumsScreen() {
         ) : (
           <View style={styles.empty}>
             <Ionicons
-              name={failed ? 'cloud-offline-outline' : 'chatbubbles-outline'}
+              name={failed ? 'cloud-offline-outline' : filtered ? 'search-outline' : 'chatbubbles-outline'}
               size={38}
               color={Colors.light.tint}
             />
-            <Text style={styles.emptyTitle}>{failed ? 'Couldn’t load the forums' : 'No threads yet'}</Text>
+            <Text style={styles.emptyTitle}>
+              {failed ? 'Couldn’t load the forums' : filtered ? 'No matching threads' : 'No threads yet'}
+            </Text>
             <Text style={styles.emptyText}>
               {failed
-                ? 'Pull down to try again. If this keeps happening, the forums database update may not be installed yet.'
-                : 'Start the first conversation with “New thread”.'}
+                ? failed
+                : filtered
+                  ? 'Try another search or category, or clear the filters.'
+                  : 'Start the first conversation with “New thread”.'}
             </Text>
           </View>
         )
@@ -159,13 +255,17 @@ export default function ForumsScreen() {
         </Pressable>
       )}
     />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  wrap: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -213,27 +313,65 @@ const styles = StyleSheet.create({
   },
   chips: {
     gap: 8,
+    alignItems: 'center',
   },
-  chip: {
+  chipDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 24,
+    backgroundColor: Colors.light.border,
+    marginHorizontal: 2,
+  },
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    borderWidth: 1,
-    borderColor: Colors.light.tint,
-    backgroundColor: Colors.light.card,
-    borderRadius: 999,
+    gap: 8,
+    ...glass,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 7,
   },
-  chipActive: {
+  searchInput: {
+    flex: 1,
+    color: Colors.light.text,
+    fontSize: 15,
+    paddingVertical: 10,
+  },
+  sorts: {
+    flexDirection: 'row',
+    ...glass,
+    borderRadius: 12,
+    padding: 3,
+  },
+  sort: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
+  sortActive: {
     backgroundColor: Colors.light.tint,
   },
-  chipText: {
-    color: Colors.light.tint,
+  sortText: {
+    color: Colors.light.muted,
     fontWeight: '700',
+    fontSize: 13,
   },
-  chipTextActive: {
+  sortTextActive: {
     color: Colors.light.onTint,
+  },
+  summary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  summaryText: {
+    flex: 1,
+    color: Colors.light.muted,
+    fontSize: 13,
+  },
+  clear: {
+    color: Colors.light.tint,
+    fontWeight: '800',
+    padding: 4,
   },
   loading: {
     marginTop: 32,
@@ -258,9 +396,7 @@ const styles = StyleSheet.create({
     gap: 6,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    ...glass,
   },
   threadTop: {
     flexDirection: 'row',

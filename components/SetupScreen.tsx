@@ -2,14 +2,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { useAuth } from '@/context/AuthContext';
+import { cleanHandle } from '@/lib/handles';
 
 type Mode = 'signIn' | 'signUp';
-
-// Same rules the database applies to handles (lowercase letters, numbers, . and _),
-// enforced while typing so what you see is what you get.
-const cleanHandle = (text: string) => text.toLowerCase().replace(/[^a-z0-9_.]/g, '').slice(0, 24);
 
 export function SetupScreen() {
   const { signIn, signUp } = useAuth();
@@ -45,7 +44,9 @@ export function SetupScreen() {
   };
 
   return (
-    <View style={styles.wrap}>
+    <View style={styles.page}>
+      <GlassBackdrop />
+      <View style={styles.wrap}>
       <Text style={styles.kicker}>REVAPP</Text>
       <Text style={styles.title}>Instagram for cars.</Text>
       <Text style={styles.copy}>
@@ -56,7 +57,7 @@ export function SetupScreen() {
       {isSignUp ? (
         <TextInput
           value={username}
-          onChangeText={(text) => setUsername(cleanHandle(text))}
+          onChangeText={(text) => setUsername(cleanHandle(text, 24))}
           autoCapitalize="none"
           autoCorrect={false}
           placeholder="your handle (letters, numbers, . and _)"
@@ -122,6 +123,7 @@ export function SetupScreen() {
         </Text>
       </Pressable>
     </View>
+    </View>
   );
 }
 
@@ -137,9 +139,12 @@ const styles = StyleSheet.create({
     right: 14,
     top: 14,
   },
-  wrap: {
+  page: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  wrap: {
+    flex: 1,
     justifyContent: 'center',
     padding: 28,
     maxWidth: 480,
@@ -165,9 +170,8 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
+    ...glass,
+    shadowOpacity: 0,
     color: Colors.light.text,
     borderRadius: 12,
     paddingHorizontal: 16,

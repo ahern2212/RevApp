@@ -7,6 +7,8 @@ import { Avatar } from '@/components/Avatar';
 import { GarageSection } from '@/components/GarageSection';
 import { PostGrid } from '@/components/PostGrid';
 import Colors from '@/constants/Colors';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
+import { glass } from '@/constants/glass';
 import { THEMES } from '@/constants/themes';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
@@ -65,7 +67,9 @@ export default function ProfileScreen() {
   const shown = section === 'posts' ? myPosts : saved;
 
   return (
-    <ScrollView
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
       style={styles.wrap}
       contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
       refreshControl={
@@ -144,13 +148,17 @@ export default function ProfileScreen() {
         }
       />
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  wrap: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -182,9 +190,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    ...glass,
     marginBottom: 20,
   },
   pressed: {

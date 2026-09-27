@@ -4,14 +4,11 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  BODY_STYLE_LABELS,
-  CarRender,
-  PAINT_COLORS,
-  WHEEL_COLORS,
-} from '@/components/CarRender';
+import { CarRender } from '@/components/CarRender';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { type Car, carTitle, fetchCars } from '@/lib/cars';
+import { BODY_STYLE_LABELS, PAINT_COLORS, WHEEL_COLORS } from '@/lib/carShapes';
 
 const colorName = (list: { name: string; hex: string }[], hex: string) =>
   list.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name ?? hex;
@@ -189,9 +186,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 16,
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    ...glass,
     overflow: 'hidden',
   },
   stage: {

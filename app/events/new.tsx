@@ -12,25 +12,16 @@ import {
 } from 'react-native';
 
 import { TileMap } from '@/components/TileMap';
+import { Chip } from '@/components/Chip';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { showError } from '@/lib/confirm';
 import { atTime, dayLabel, nextDays, parseTime } from '@/lib/datetime';
 import { createEvent, formatEventTime } from '@/lib/events';
 import { type Place, searchPlaces } from '@/lib/geocode';
 
 const QUICK_TIMES = ['10 AM', '12 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM'];
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
 
 export default function NewEventScreen() {
   const router = useRouter();
@@ -97,8 +88,10 @@ export default function NewEventScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.wrap}
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
+      style={styles.list}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets>
@@ -234,13 +227,21 @@ export default function NewEventScreen() {
         <Text style={styles.buttonText}>{busy ? 'Creating…' : 'Put it on the map'}</Text>
       </Pressable>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -256,9 +257,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
+    ...glass,
+    shadowOpacity: 0,
     color: Colors.light.text,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -280,24 +280,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: Colors.light.tint,
-    backgroundColor: Colors.light.card,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  chipActive: {
-    backgroundColor: Colors.light.tint,
-  },
-  chipText: {
-    color: Colors.light.tint,
-    fontWeight: '700',
-  },
-  chipTextActive: {
-    color: Colors.light.onTint,
   },
   preview: {
     color: Colors.light.muted,

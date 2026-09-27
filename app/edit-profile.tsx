@@ -5,23 +5,28 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
+import { useAuth } from '@/context/AuthContext';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile, useProfiles } from '@/context/ProfilesContext';
 import { confirm, showError } from '@/lib/confirm';
-import { BIO_MAX, deleteMyAccount, updateMyProfile } from '@/lib/profiles';
+import { cleanHandle, HANDLE_MAX, isValidHandle } from '@/lib/handles';
+import { BIO_MAX, deleteMyAccount, updateMyProfile, updateUsername } from '@/lib/profiles';
 import { unregisterPush } from '@/lib/push';
 
 type PickedImage = { uri: string; mimeType?: string };
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user } = useGarage();
+  const { user, refresh } = useGarage();
+  const { setUsername: setAuthUsername } = useAuth();
   const { setProfile } = useProfiles();
   const profile = useProfile(user?.id);
 
   // null = untouched (use the saved values); set once the user edits.
   const [bio, setBio] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
   const [removeAvatar, setRemoveAvatar] = useState(false);
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
@@ -35,8 +40,13 @@ export default function EditProfileScreen() {
   }
 
   const currentBio = bio ?? profile.bio;
+  const currentUsername = username ?? user.username;
+  const usernameChanged = currentUsername !== user.username;
+  const usernameValid = isValidHandle(currentUsername);
   const previewUri = image ? image.uri : removeAvatar ? null : profile.avatarUri;
-  const changed = bio !== null || image !== null || removeAvatar;
+  const profileChanged = bio !== null || image !== null || removeAvatar;
+  const changed = profileChanged || usernameChanged;
+  const canSave = changed && usernameValid && busy === null;
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -54,12 +64,15 @@ export default function EditProfileScreen() {
   const save = async () => {
     setBusy('save');
     try {
-      const updated = await updateMyProfile(profile, {
-        bio: currentBio,
-        image: image ?? undefined,
-        removeAvatar,
-      });
-      setProfile(updated);
+      if (usernameChanged) {
+        await updateUsername(user.id, currentUsername);
+        setAuthUsername(currentUsername);
+        refresh(); // posts show the new name
+      }
+      const updated = profileChanged
+        ? await updateMyProfile(profile, { bio: currentBio, image: image ?? undefined, removeAvatar })
+        : profile;
+      setProfile({ ...updated, username: currentUsername });
       router.back();
     } catch (error) {
       showError('Could not save profile', error);
@@ -94,8 +107,10 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.wrap}
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
+      style={styles.list}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets>
@@ -128,7 +143,23 @@ export default function EditProfileScreen() {
       </View>
 
       <Text style={styles.label}>Username</Text>
-      <Text style={styles.username}>@{user.username}</Text>
+      <View style={[styles.handleRow, !usernameValid && styles.inputError]}>
+        <Text style={styles.at}>@</Text>
+        <TextInput
+          value={currentUsername}
+          onChangeText={(text) => setUsername(cleanHandle(text))}
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={HANDLE_MAX}
+          accessibilityLabel="Username"
+          style={styles.handleInput}
+        />
+      </View>
+      <Text style={[styles.hint, !usernameValid && styles.hintError]}>
+        {usernameValid
+          ? 'Lowercase letters, numbers, dots and underscores. Your old name frees up for others.'
+          : 'At least 2 characters: lowercase letters, numbers, dots or underscores.'}
+      </Text>
 
       <Text style={styles.label}>Bio</Text>
       <TextInput
@@ -147,10 +178,10 @@ export default function EditProfileScreen() {
 
       <Pressable
         onPress={save}
-        disabled={!changed || busy !== null}
+        disabled={!canSave}
         accessibilityRole="button"
-        accessibilityState={{ disabled: !changed || busy !== null, busy: busy === 'save' }}
-        style={[styles.button, (!changed || busy !== null) && styles.buttonDisabled]}>
+        accessibilityState={{ disabled: !canSave, busy: busy === 'save' }}
+        style={[styles.button, !canSave && styles.buttonDisabled]}>
         <Text style={styles.buttonText}>{busy === 'save' ? 'Saving…' : 'Save'}</Text>
       </Pressable>
 
@@ -170,13 +201,21 @@ export default function EditProfileScreen() {
         </Pressable>
       </View>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -225,11 +264,41 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginTop: 8,
   },
-  username: {
+  handleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+    borderRadius: 12,
+    paddingLeft: 14,
+  },
+  inputError: {
+    borderColor: Colors.light.danger,
+  },
+  at: {
+    color: Colors.light.muted,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  handleInput: {
+    flex: 1,
     color: Colors.light.text,
     fontSize: 16,
     fontWeight: '700',
+    paddingVertical: 12,
+    paddingLeft: 2,
+    paddingRight: 14,
+  },
+  hint: {
+    color: Colors.light.muted,
+    fontSize: 12,
+    marginTop: 4,
     marginBottom: 8,
+    lineHeight: 17,
+  },
+  hintError: {
+    color: Colors.light.danger,
   },
   input: {
     minHeight: 96,

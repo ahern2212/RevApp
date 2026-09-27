@@ -7,6 +7,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { CarDetailsInput } from '@/components/CarDetailsInput';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { useGarage } from '@/context/GarageContext';
 import { showError } from '@/lib/confirm';
 import { useTabBarSpace } from '@/lib/layout';
@@ -57,7 +59,9 @@ export default function PostScreen() {
   };
 
   return (
-    <ScrollView
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
       style={styles.wrap}
       contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
       keyboardShouldPersistTaps="handled"
@@ -107,15 +111,19 @@ export default function PostScreen() {
       </Pressable>
       {!imageUri ? <Text style={styles.hint}>Add a photo to share your build.</Text> : null}
     </ScrollView>
+    </View>
   );
 }
 
 const CAPTION_MAX = 2200;
 
 const styles = StyleSheet.create({
-  wrap: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  wrap: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -178,9 +186,8 @@ const styles = StyleSheet.create({
     aspectRatio: 4 / 5,
   },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
+    ...glass,
+    shadowOpacity: 0,
     color: Colors.light.text,
     borderRadius: 12,
     paddingHorizontal: 16,

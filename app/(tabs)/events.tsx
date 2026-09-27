@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TileMap } from '@/components/TileMap';
 import Colors from '@/constants/Colors';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
+import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
 import { type CarEvent, fetchUpcomingEvents, formatEventTime } from '@/lib/events';
 import { useTabBarSpace } from '@/lib/layout';
@@ -58,7 +60,9 @@ export default function EventsScreen() {
   const list = events ?? [];
 
   return (
-    <ScrollView
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView
       style={styles.wrap}
       contentContainerStyle={[styles.content, { paddingTop: top + 16, paddingBottom: tabBarSpace }]}
       refreshControl={
@@ -158,13 +162,17 @@ export default function EventsScreen() {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  wrap: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -240,9 +248,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    ...glass,
   },
   cardSelected: {
     borderColor: Colors.light.tint,

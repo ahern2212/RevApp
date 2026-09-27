@@ -14,6 +14,8 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string, username: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
+  /** Updates the signed-in user's name everywhere after a username change. */
+  setUsername: (username: string) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -92,6 +94,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (error) return { error: error.message };
         // With "Confirm email" enabled in Supabase, no session is returned until the link is clicked.
         return { error: null, needsConfirmation: !data.session };
+      },
+      setUsername: (username: string) => {
+        if (session) setProfile({ id: session.user.id, username });
       },
       signOut: async () => {
         // Stop pushes to this phone first; it needs the session to do so.

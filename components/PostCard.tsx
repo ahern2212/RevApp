@@ -13,6 +13,7 @@ import Animated, {
 
 import { Avatar } from '@/components/Avatar';
 import Colors from '@/constants/Colors';
+import { glass } from '@/constants/glass';
 import { timeAgo } from '@/lib/time';
 import type { Post } from '@/types';
 
@@ -218,11 +219,11 @@ export function PostCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.light.card,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.light.border,
+    ...glass,
+    borderRadius: 22,
+    marginHorizontal: 10,
+    marginBottom: 14,
     paddingBottom: 16,
-    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',

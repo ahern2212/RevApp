@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { useActivity } from '@/context/ActivityContext';
 import { type Activity, describeActivity, fetchActivity } from '@/lib/activity';
@@ -54,8 +55,10 @@ export default function ActivityScreen() {
   };
 
   return (
-    <FlatList
-      style={styles.wrap}
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <FlatList
+      style={styles.list}
       contentContainerStyle={styles.content}
       data={list ?? []}
       keyExtractor={(item) => item.id}
@@ -112,13 +115,21 @@ export default function ActivityScreen() {
         </Pressable>
       )}
     />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     paddingVertical: 8,

@@ -14,6 +14,7 @@ import {
 
 import { Avatar } from '@/components/Avatar';
 import { TileMap } from '@/components/TileMap';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
@@ -120,7 +121,9 @@ export default function EventScreen() {
     );
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <ScrollView style={styles.list} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: event.title }} />
       <TileMap
         height={240}
@@ -198,13 +201,21 @@ export default function EventScreen() {
         </Pressable>
       ) : null}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     padding: 16,

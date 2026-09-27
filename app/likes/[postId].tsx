@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 
@@ -41,8 +42,10 @@ export default function LikesScreen() {
   }, [postId]);
 
   return (
-    <FlatList
-      style={styles.wrap}
+    <View style={styles.screen}>
+      <GlassBackdrop />
+      <FlatList
+      style={styles.list}
       contentContainerStyle={styles.content}
       data={list ?? []}
       keyExtractor={(item) => item.id}
@@ -69,13 +72,21 @@ export default function LikesScreen() {
         </Pressable>
       )}
     />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  list: {
+    flex: 1,
   },
   content: {
     paddingVertical: 8,

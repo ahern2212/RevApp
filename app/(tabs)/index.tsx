@@ -13,6 +13,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeedHeader, useFeedHeaderHeight } from '@/components/FeedHeader';
+import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { OptionsSheet } from '@/components/OptionsSheet';
 import { PostCard } from '@/components/PostCard';
 import Colors from '@/constants/Colors';
@@ -137,6 +138,7 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.wrap}>
+      <GlassBackdrop />
       <Animated.FlatList
         ref={listRef}
         data={posts}

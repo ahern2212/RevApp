@@ -1,8 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { BlurView } from 'expo-blur';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
+import { blurTint } from '@/constants/glass';
 
 // Wait for the sheet's slide-out before acting: iOS drops alerts presented mid-dismissal.
 const CLOSE_MS = 300;
@@ -28,6 +30,7 @@ export function OptionsSheet({ visible, options, onClose }: Props) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
       <View style={[styles.sheet, { paddingBottom: bottom + 12 }]}>
+        <BlurView intensity={70} tint={blurTint} style={StyleSheet.absoluteFill} />
         <View style={styles.grabber} />
         {options.map((option) => (
           <Pressable
@@ -65,7 +68,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(45, 31, 71, 0.35)',
   },
   sheet: {
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.light.card,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: Colors.light.glassBorder,
+    overflow: 'hidden',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
