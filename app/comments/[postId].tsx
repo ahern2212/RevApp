@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -24,6 +24,7 @@ import { RichText } from '@/components/RichText';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
+import { replyParentId, threadComments } from '@/lib/commentThreads';
 import { confirm, showError } from '@/lib/confirm';
 import {
   addComment,
@@ -31,6 +32,7 @@ import {
   COMMENT_MAX_LENGTH,
   deleteComment,
   fetchComments,
+  setCommentLiked,
 } from '@/lib/comments';
 import { fetchPost } from '@/lib/posts';
 import { timeAgo } from '@/lib/time';
@@ -44,6 +46,9 @@ function CommentRow({
   onNamePress,
   onDelete,
   onLongPress,
+  onReply,
+  likes,
+  isReply = false,
 }: {
   name: string;
   userId?: string;
@@ -53,16 +58,19 @@ function CommentRow({
   onDelete?: () => void;
   /** Report/block menu for other people's comments. */
   onLongPress?: () => void;
+  onReply?: () => void;
+  likes?: { count: number; liked: boolean; onToggle: () => void };
+  isReply?: boolean;
 }) {
   return (
     <Pressable
-      style={styles.row}
+      style={[styles.row, isReply && styles.replyRow]}
       onLongPress={onLongPress}
       delayLongPress={350}
       accessibilityHint={onLongPress ? 'Long-press to report or block' : undefined}
       accessibilityActions={onLongPress ? [{ name: 'longpress', label: 'Report or block' }] : undefined}
       onAccessibilityAction={onLongPress}>
-      <Avatar name={name} userId={userId} size={32} />
+      <Avatar name={name} userId={userId} size={isReply ? 26 : 32} />
       <View style={styles.rowBody}>
         <Text style={styles.body}>
           <Text style={styles.username} onPress={onNamePress}>
@@ -70,15 +78,42 @@ function CommentRow({
           </Text>
           <RichText text={body} />
         </Text>
-        <Text style={styles.meta}>{timeAgo(createdAt)}</Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.meta}>{timeAgo(createdAt)}</Text>
+          {likes && likes.count > 0 ? (
+            <Text style={styles.metaStrong}>
+              {likes.count} {likes.count === 1 ? 'like' : 'likes'}
+            </Text>
+          ) : null}
+          {onReply ? (
+            <Text style={styles.metaStrong} onPress={onReply} accessibilityRole="button">
+              Reply
+            </Text>
+          ) : null}
+          {onDelete ? (
+            <Text
+              style={styles.metaStrong}
+              onPress={onDelete}
+              accessibilityRole="button"
+              accessibilityLabel="Delete comment">
+              Delete
+            </Text>
+          ) : null}
+        </View>
       </View>
-      {onDelete ? (
+      {likes ? (
         <Pressable
-          onPress={onDelete}
-          hitSlop={8}
+          onPress={likes.onToggle}
+          hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Delete comment">
-          <Ionicons name="trash-outline" size={18} color={Colors.light.muted} />
+          accessibilityLabel={likes.liked ? 'Unlike comment' : 'Like comment'}
+          accessibilityState={{ selected: likes.liked }}
+          style={styles.commentHeart}>
+          <Ionicons
+            name={likes.liked ? 'heart' : 'heart-outline'}
+            size={15}
+            color={likes.liked ? Colors.light.tint : Colors.light.muted}
+          />
         </Pressable>
       ) : null}
     </Pressable>
@@ -114,6 +149,8 @@ export default function CommentsScreen() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [menu, setMenu] = useState<SheetOption[] | null>(null);
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const dropComments = (match: (comment: Comment) => boolean) => {
     const gone = (comments ?? []).filter(match).length;
@@ -188,10 +225,11 @@ export default function CommentsScreen() {
     if (!body || sending) return;
     setSending(true);
     try {
-      const comment = await addComment(postId, body);
+      const comment = await addComment(postId, body, replyTo ? replyParentId(replyTo) : null);
       setComments((current) => [...(current ?? []), comment]);
       adjustCommentCount(postId, 1);
       setDraft('');
+      setReplyTo(null);
     } catch (error) {
       showError('Could not comment', error);
     } finally {
@@ -199,12 +237,54 @@ export default function CommentsScreen() {
     }
   };
 
-  const remove = async (commentId: string) => {
-    if (!(await confirm('Delete comment?', 'This can’t be undone.', 'Delete'))) return;
+  // Like Instagram: replying starts the message with "@name" (which also notifies them).
+  const startReply = (comment: Comment) => {
+    setReplyTo(comment);
+    setDraft(`@${comment.authorName} `);
+    inputRef.current?.focus();
+  };
+
+  const cancelReply = () => {
+    setReplyTo(null);
+    setDraft('');
+  };
+
+  const toggleCommentLike = async (comment: Comment) => {
+    if (!user) return;
+    const liked = comment.likedBy.includes(user.id);
+    const apply = (likedNow: boolean) =>
+      setComments((current) =>
+        (current ?? []).map((c) =>
+          c.id === comment.id
+            ? {
+                ...c,
+                likedBy: likedNow
+                  ? [...c.likedBy.filter((id) => id !== user.id), user.id]
+                  : c.likedBy.filter((id) => id !== user.id),
+              }
+            : c
+        )
+      );
+    apply(!liked); // optimistic; undone if the write fails
     try {
-      await deleteComment(commentId);
-      setComments((current) => (current ?? []).filter((c) => c.id !== commentId));
-      adjustCommentCount(postId, -1);
+      await setCommentLiked(comment.id, user.id, !liked);
+    } catch (error) {
+      apply(liked);
+      showError('Could not update like', error);
+    }
+  };
+
+  const remove = async (comment: Comment) => {
+    const hasReplies = (comments ?? []).some((c) => c.parentId === comment.id);
+    const ok = await confirm(
+      'Delete comment?',
+      hasReplies ? 'Its replies will be deleted too. This can’t be undone.' : 'This can’t be undone.',
+      'Delete'
+    );
+    if (!ok) return;
+    try {
+      await deleteComment(comment.id);
+      dropComments((c) => c.id === comment.id || c.parentId === comment.id);
     } catch (error) {
       showError('Could not delete', error);
     }
@@ -224,7 +304,7 @@ export default function CommentsScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
       <FlatList
-        data={comments ?? []}
+        data={threadComments(comments ?? [])}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
@@ -306,17 +386,35 @@ export default function CommentsScreen() {
             userId={item.authorId}
             body={item.body}
             createdAt={item.createdAt}
+            isReply={item.isReply}
             onNamePress={() => openProfile(item.authorId, item.authorName)}
-            onDelete={item.authorId === user?.id ? () => remove(item.id) : undefined}
+            onDelete={item.authorId === user?.id ? () => remove(item) : undefined}
             onLongPress={item.authorId !== user?.id ? () => openCommentMenu(item) : undefined}
+            onReply={() => startReply(item)}
+            likes={{
+              count: item.likedBy.length,
+              liked: !!user && item.likedBy.includes(user.id),
+              onToggle: () => toggleCommentLike(item),
+            }}
           />
         )}
       />
+      {replyTo ? (
+        <View style={styles.replyBar}>
+          <Text style={styles.replyBarText} numberOfLines={1}>
+            Replying to <Text style={styles.username}>@{replyTo.authorName}</Text>
+          </Text>
+          <Pressable onPress={cancelReply} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel reply">
+            <Ionicons name="close" size={18} color={Colors.light.muted} />
+          </Pressable>
+        </View>
+      ) : null}
       <View style={[styles.composer, { paddingBottom: bottom + 10 }]}>
         <TextInput
+          ref={inputRef}
           value={draft}
           onChangeText={setDraft}
-          placeholder={`Comment as ${user?.username ?? 'you'}…`}
+          placeholder={replyTo ? 'Write a reply…' : `Comment as ${user?.username ?? 'you'}…`}
           placeholderTextColor={Colors.light.placeholder}
           maxLength={COMMENT_MAX_LENGTH}
           multiline
@@ -440,7 +538,37 @@ const styles = StyleSheet.create({
   meta: {
     color: Colors.light.muted,
     fontSize: 12,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
     marginTop: 4,
+  },
+  metaStrong: {
+    color: Colors.light.muted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  replyRow: {
+    marginLeft: 42,
+  },
+  commentHeart: {
+    paddingTop: 4,
+  },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+  },
+  replyBarText: {
+    flex: 1,
+    color: Colors.light.muted,
   },
   loading: {
     marginTop: 32,

@@ -11,7 +11,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Upload safety** — only real photos (JPEG, PNG, WebP, HEIC) and videos (MP4, MOV, 1–60 s, 50 MB) are accepted, checked by their actual bytes, not the file name. Every photo is re-encoded on the device, which strips GPS location and camera details and turns HEIC into JPEG. Tiny or stretched images are refused. The database enforces the same types, sizes, folders and file names, and rate-limits posts, comments, listings, threads, meets and garage cars
 - **Post page** — photo (tap for full screen), car, caption and comments; opened from the feed, grids, Activity and shared links
 - **Likes** — tap the heart or double-tap the photo; tap the count to see who liked it
-- **Comments** — the car button opens comments; delete your own
+- **Comments** — the car button opens comments; like comments with the heart, reply (one level, starting with @name so they're notified), delete your own (and its replies)
 - **Hashtags & mentions** — #tags and @usernames in captions, comments and forum posts are tappable: a tag opens search for it, a mention opens that driver's profile; mentioning someone in a caption or comment notifies them (Activity, toast and push)
 - **Saves** — bookmark any post; private "Saved" section on your profile
 - **Profile tabs** — Posts, Videos and Saved on your own profile
