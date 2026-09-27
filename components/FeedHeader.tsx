@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import Colors, { palette } from '@/constants/Colors';
+import { useActivity } from '@/context/ActivityContext';
 
 const BANNER_HEIGHT = 128;
 const HORIZON = 92; // distance from the top of the banner (below the safe area) to the horizon
@@ -112,11 +113,17 @@ function SunsetScene({ width, height, top }: { width: number; height: number; to
   );
 }
 
+/** Full header height including the status bar area; the feed uses it to offset its content. */
+export function useFeedHeaderHeight(): number {
+  return useSafeAreaInsets().top + BANNER_HEIGHT;
+}
+
 export function FeedHeader() {
   const router = useRouter();
+  const { unread } = useActivity();
   const { top } = useSafeAreaInsets();
   const [width, setWidth] = useState(0);
-  const height = top + BANNER_HEIGHT;
+  const height = useFeedHeaderHeight();
 
   return (
     <View
@@ -132,20 +139,45 @@ export function FeedHeader() {
         </View>
       ) : null}
       <View style={[styles.inner, { paddingTop: top + 10 }]}>
-        <View>
+        <View style={styles.brandBlock}>
           <Text style={styles.brand} accessibilityRole="header">
             GARAGE
           </Text>
-          <Text style={styles.tagline}>Fresh builds from the community</Text>
+          <Text style={styles.tagline} numberOfLines={1}>
+            Fresh builds from the community
+          </Text>
         </View>
-        <Pressable
-          onPress={() => router.push('/post')}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="New post"
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
-          <Ionicons name="add" size={24} color={Colors.light.onTint} />
-        </Pressable>
+        <View style={styles.buttons}>
+          <Pressable
+            onPress={() => router.push('/search')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Search"
+            style={({ pressed }) => [styles.action, styles.actionLight, pressed && styles.actionPressed]}>
+            <Ionicons name="search" size={20} color={Colors.light.tint} />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/activity')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={unread > 0 ? `Activity, ${unread} new` : 'Activity'}
+            style={({ pressed }) => [styles.action, styles.actionLight, pressed && styles.actionPressed]}>
+            <Ionicons name="heart-outline" size={22} color={Colors.light.tint} />
+            {unread > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/post')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="New post"
+            style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
+            <Ionicons name="add" size={24} color={Colors.light.onTint} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -164,6 +196,10 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     width: '100%',
     alignSelf: 'center',
+  },
+  brandBlock: {
+    flex: 1,
+    marginRight: 10,
   },
   brand: {
     color: Colors.light.text,
@@ -190,6 +226,33 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  actionLight: {
+    backgroundColor: '#ffffff',
+    borderColor: Colors.light.tint,
+  },
+  buttons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: Colors.light.danger,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
   },
   actionPressed: {
     opacity: 0.7,

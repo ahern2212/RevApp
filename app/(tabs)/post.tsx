@@ -1,12 +1,15 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CarDetailsInput } from '@/components/CarDetailsInput';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
+import { showError } from '@/lib/confirm';
+import { useTabBarSpace } from '@/lib/layout';
 import { type CarDetails, formatCar } from '@/lib/vehicles';
 
 const EMPTY_CAR: CarDetails = { year: '', make: '', model: '' };
@@ -19,6 +22,8 @@ export default function PostScreen() {
   const [car, setCar] = useState<CarDetails>(EMPTY_CAR);
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
+  const tabBarSpace = useTabBarSpace();
+  const canShare = !!imageUri && !busy;
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -33,7 +38,7 @@ export default function PostScreen() {
 
   const share = async () => {
     if (!imageUri) {
-      Alert.alert('Add a photo', 'Pick a car photo before sharing.');
+      showError('Add a photo', new Error('Pick a car photo before sharing.'));
       return;
     }
     setBusy(true);
@@ -45,7 +50,7 @@ export default function PostScreen() {
       setCaption('');
       router.replace('/');
     } catch (error) {
-      Alert.alert('Could not share', error instanceof Error ? error.message : 'Please try again.');
+      showError('Could not share', error);
     } finally {
       setBusy(false);
     }
@@ -54,13 +59,27 @@ export default function PostScreen() {
   return (
     <ScrollView
       style={styles.wrap}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled">
-      <Pressable onPress={pickImage} style={styles.picker}>
+      contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets>
+      <Pressable
+        onPress={pickImage}
+        style={styles.picker}
+        accessibilityRole="button"
+        accessibilityLabel={imageUri ? 'Change photo' : 'Choose a car photo'}>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.preview} contentFit="cover" />
+          <>
+            <Image source={{ uri: imageUri }} style={styles.preview} contentFit="cover" />
+            <View style={styles.changeBadge}>
+              <Ionicons name="images-outline" size={14} color={Colors.light.onTint} />
+              <Text style={styles.changeText}>Change</Text>
+            </View>
+          </>
         ) : (
-          <Text style={styles.pickerText}>Tap to choose a car photo</Text>
+          <View style={styles.pickerEmpty}>
+            <Ionicons name="camera-outline" size={40} color={Colors.light.tint} />
+            <Text style={styles.pickerText}>Tap to choose a car photo</Text>
+          </View>
         )}
       </Pressable>
       <CarDetailsInput value={car} onChange={setCar} />
@@ -68,17 +87,30 @@ export default function PostScreen() {
         value={caption}
         onChangeText={setCaption}
         placeholder="Caption"
-        maxLength={2200}
+        maxLength={CAPTION_MAX}
         placeholderTextColor={Colors.light.placeholder}
         multiline
         style={[styles.input, styles.caption]}
       />
-      <Pressable style={[styles.button, busy && { opacity: 0.5 }]} disabled={busy} onPress={share}>
+      {caption.length > CAPTION_MAX - 200 ? (
+        <Text style={styles.counter}>
+          {caption.length}/{CAPTION_MAX}
+        </Text>
+      ) : null}
+      <Pressable
+        style={[styles.button, !canShare && styles.buttonDisabled]}
+        disabled={!canShare}
+        onPress={share}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canShare, busy }}>
         <Text style={styles.buttonText}>{busy ? 'Sharing…' : 'Share'}</Text>
       </Pressable>
+      {!imageUri ? <Text style={styles.hint}>Add a photo to share your build.</Text> : null}
     </ScrollView>
   );
 }
+
+const CAPTION_MAX = 2200;
 
 const styles = StyleSheet.create({
   wrap: {
@@ -101,6 +133,41 @@ const styles = StyleSheet.create({
     minHeight: 280,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pickerEmpty: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  changeBadge: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(45, 31, 71, 0.7)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  changeText: {
+    color: Colors.light.onTint,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  counter: {
+    color: Colors.light.muted,
+    fontSize: 12,
+    textAlign: 'right',
+    marginTop: -6,
+  },
+  buttonDisabled: {
+    opacity: 0.4,
+  },
+  hint: {
+    color: Colors.light.muted,
+    textAlign: 'center',
+    fontSize: 13,
   },
   pickerText: {
     color: Colors.light.muted,

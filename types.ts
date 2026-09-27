@@ -7,6 +7,7 @@ export type Post = {
   id: string;
   authorId: string;
   authorName: string;
+  imagePath: string;
   imageUri: string;
   caption: string;
   car: string;

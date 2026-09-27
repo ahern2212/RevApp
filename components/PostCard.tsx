@@ -1,50 +1,137 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
+import { Avatar } from '@/components/Avatar';
 import Colors from '@/constants/Colors';
 import { timeAgo } from '@/lib/time';
 import type { Post } from '@/types';
+
+const DOUBLE_TAP_MS = 300;
+const CAPTION_PREVIEW_CHARS = 110;
 
 type Props = {
   post: Post;
   liked: boolean;
   onLike: () => void;
   onComment: () => void;
+  saved: boolean;
+  onSave: () => void;
+  onShare: () => void;
+  onAuthorPress: () => void;
+  onLikesPress: () => void;
+  /** Only passed for the signed-in user's own posts (opens edit/delete options). */
+  onOptions?: () => void;
 };
 
-export function PostCard({ post, liked, onLike, onComment }: Props) {
+export function PostCard({
+  post,
+  liked,
+  onLike,
+  onComment,
+  saved,
+  onSave,
+  onShare,
+  onAuthorPress,
+  onLikesPress,
+  onOptions,
+}: Props) {
   const heartScale = useSharedValue(1);
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: heartScale.get() }] }));
 
+  // Big heart that pops over the photo on double-tap.
+  const burstScale = useSharedValue(0);
+  const burstOpacity = useSharedValue(0);
+  const burstStyle = useAnimatedStyle(() => ({
+    opacity: burstOpacity.get(),
+    transform: [{ scale: burstScale.get() }],
+  }));
+  const lastTap = useRef(0);
+  const [captionOpen, setCaptionOpen] = useState(false);
+  const longCaption =
+    post.caption.length > CAPTION_PREVIEW_CHARS || post.caption.split('\n').length > 2;
+
+  const popSmallHeart = () =>
+    heartScale.set(withSequence(withTiming(1.3, { duration: 120 }), withSpring(1)));
+
   const handleLike = () => {
-    if (!liked) {
-      heartScale.set(withSequence(withTiming(1.3, { duration: 120 }), withSpring(1)));
-    }
+    if (!liked) popSmallHeart();
     onLike();
+  };
+
+  // Double-tap only ever likes (never unlikes), like Instagram.
+  const handlePhotoPress = () => {
+    const now = Date.now();
+    if (now - lastTap.current > DOUBLE_TAP_MS) {
+      lastTap.current = now;
+      return;
+    }
+    lastTap.current = 0;
+    burstScale.set(
+      withSequence(withTiming(0.3, { duration: 0 }), withSpring(1, { damping: 9, stiffness: 180 }))
+    );
+    burstOpacity.set(
+      withSequence(withTiming(1, { duration: 80 }), withDelay(500, withTiming(0, { duration: 220 })))
+    );
+    if (!liked) {
+      popSmallHeart();
+      onLike();
+    }
   };
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarLetter}>{post.authorName.slice(0, 1).toUpperCase()}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.username}>{post.authorName}</Text>
-          <Text style={styles.meta}>
-            {post.car} · {timeAgo(post.createdAt)}
-          </Text>
-        </View>
+        <Pressable
+          onPress={onAuthorPress}
+          style={styles.author}
+          accessibilityRole="link"
+          accessibilityLabel={`View ${post.authorName}'s profile`}>
+          <Avatar name={post.authorName} userId={post.authorId} size={36} />
+          <View style={styles.authorText}>
+            <Text style={styles.username}>{post.authorName}</Text>
+            <Text style={styles.meta} numberOfLines={1}>
+              {post.car ? `${post.car} · ` : ''}
+              {timeAgo(post.createdAt)}
+            </Text>
+          </View>
+        </Pressable>
+        {onOptions ? (
+          <Pressable
+            onPress={onOptions}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Post options">
+            <Ionicons name="ellipsis-horizontal" size={20} color={Colors.light.text} />
+          </Pressable>
+        ) : null}
       </View>
-      <Image source={{ uri: post.imageUri }} style={styles.photo} contentFit="cover" />
+
+      <Pressable
+        onPress={handlePhotoPress}
+        accessibilityRole="image"
+        accessibilityLabel={post.car ? `Photo of ${post.car}` : 'Car photo'}
+        accessibilityHint="Double-tap to like">
+        <Image
+          source={{ uri: post.imageUri }}
+          style={styles.photo}
+          contentFit="cover"
+          transition={200}
+        />
+        <Animated.View pointerEvents="none" style={[styles.burst, burstStyle]}>
+          <Ionicons name="heart" size={96} color="#ffffff" style={styles.burstIcon} />
+        </Animated.View>
+      </Pressable>
+
       <View style={styles.actions}>
         <Pressable
           onPress={handleLike}
@@ -60,6 +147,13 @@ export function PostCard({ post, liked, onLike, onComment }: Props) {
               size={26}
             />
           </Animated.View>
+        </Pressable>
+        <Pressable
+          onPress={post.likedBy.length > 0 ? onLikesPress : handleLike}
+          hitSlop={8}
+          style={styles.likeCount}
+          accessibilityRole="button"
+          accessibilityLabel={`${post.likedBy.length} likes. See who liked this`}>
           <Text style={[styles.count, liked && { color: Colors.light.tint }]}>
             {post.likedBy.length}
           </Text>
@@ -73,12 +167,43 @@ export function PostCard({ post, liked, onLike, onComment }: Props) {
           <Ionicons name="car-sport-outline" color={Colors.light.text} size={28} />
           <Text style={styles.count}>{post.commentCount}</Text>
         </Pressable>
+        <Pressable
+          onPress={onShare}
+          hitSlop={8}
+          style={styles.actionButton}
+          accessibilityRole="button"
+          accessibilityLabel="Share post">
+          <Ionicons name="paper-plane-outline" color={Colors.light.text} size={24} />
+        </Pressable>
+        <Pressable
+          onPress={onSave}
+          hitSlop={8}
+          style={styles.saveButton}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Remove from saved' : 'Save post'}
+          accessibilityState={{ selected: saved }}>
+          <Ionicons
+            name={saved ? 'bookmark' : 'bookmark-outline'}
+            color={saved ? Colors.light.tint : Colors.light.text}
+            size={24}
+          />
+        </Pressable>
       </View>
       {post.caption ? (
-        <Text style={styles.caption}>
-          <Text style={styles.username}>{post.authorName} </Text>
+        <Text
+          style={styles.caption}
+          numberOfLines={longCaption && !captionOpen ? 2 : undefined}
+          onPress={longCaption && !captionOpen ? () => setCaptionOpen(true) : undefined}>
+          <Text style={styles.username} onPress={onAuthorPress}>
+            {post.authorName}{' '}
+          </Text>
           {post.caption}
         </Text>
+      ) : null}
+      {longCaption && !captionOpen ? (
+        <Pressable onPress={() => setCaptionOpen(true)} accessibilityRole="button">
+          <Text style={styles.more}>more</Text>
+        </Pressable>
       ) : null}
       {post.commentCount > 0 ? (
         <Pressable onPress={onComment} accessibilityRole="button">
@@ -106,17 +231,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.light.avatar,
+  author: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 10,
   },
-  avatarLetter: {
-    color: Colors.light.tint,
-    fontWeight: '700',
+  authorText: {
+    flex: 1,
   },
   username: {
     color: Colors.light.text,
@@ -132,12 +254,32 @@ const styles = StyleSheet.create({
     aspectRatio: 4 / 5,
     backgroundColor: Colors.light.imagePlaceholder,
   },
+  burst: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  burstIcon: {
+    textShadowColor: 'rgba(45, 31, 71, 0.35)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 16,
+  },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
     paddingHorizontal: 14,
     paddingTop: 10,
+  },
+  likeCount: {
+    marginLeft: -12,
+  },
+  saveButton: {
+    marginLeft: 'auto',
   },
   actionButton: {
     flexDirection: 'row',
@@ -153,6 +295,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 8,
     lineHeight: 20,
+  },
+  more: {
+    color: Colors.light.muted,
+    fontWeight: '600',
+    paddingHorizontal: 14,
+    paddingTop: 2,
   },
   viewComments: {
     color: Colors.light.muted,

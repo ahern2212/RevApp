@@ -3,7 +3,6 @@ import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { StyleSheet } from 'react-native';
 
-import { FeedHeader } from '@/components/FeedHeader';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import Colors from '@/constants/Colors';
 
@@ -36,8 +35,8 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Feed',
-          headerShown: true,
-          header: () => <FeedHeader />,
+          // The feed draws its own header so it can slide away on scroll.
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'house.fill', android: 'home', web: 'home' }}

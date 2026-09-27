@@ -9,7 +9,9 @@ import { NotificationToaster } from '@/components/NotificationToaster';
 import { PushNotifications } from '@/components/PushNotifications';
 import { SetupScreen } from '@/components/SetupScreen';
 import Colors from '@/constants/Colors';
+import { ActivityProvider } from '@/context/ActivityContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { ProfilesProvider } from '@/context/ProfilesContext';
 import { GarageProvider, useGarage } from '@/context/GarageContext';
 
 export { ErrorBoundary } from 'expo-router';
@@ -54,7 +56,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <GarageProvider>
-        <RootLayoutNav />
+        <ProfilesProvider>
+          <RootLayoutNav />
+        </ProfilesProvider>
       </GarageProvider>
     </AuthProvider>
   );
@@ -73,15 +77,28 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={navTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="comments/[postId]"
-          options={{ presentation: 'modal', title: 'Comments', headerTitleStyle: { fontWeight: '800' } }}
-        />
-      </Stack>
-      <NotificationToaster />
-      <PushNotifications />
+      <ActivityProvider>
+        <Stack screenOptions={{ headerTitleStyle: { fontWeight: '800' }, headerBackTitle: 'Back' }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="comments/[postId]"
+            options={{ presentation: 'modal', title: 'Post' }}
+          />
+          <Stack.Screen name="activity" options={{ title: 'Activity' }} />
+          <Stack.Screen name="search" options={{ title: 'Search' }} />
+          <Stack.Screen name="likes/[postId]" options={{ title: 'Likes' }} />
+          <Stack.Screen name="edit-profile" options={{ presentation: 'modal', title: 'Edit profile' }} />
+          <Stack.Screen name="events/new" options={{ presentation: 'modal', title: 'Host a meet' }} />
+          <Stack.Screen name="events/[eventId]" options={{ title: 'Meet' }} />
+          <Stack.Screen
+            name="edit-post/[postId]"
+            options={{ presentation: 'modal', title: 'Edit caption' }}
+          />
+          <Stack.Screen name="user/[userId]" options={{ title: 'Garage' }} />
+        </Stack>
+        <NotificationToaster />
+        <PushNotifications />
+      </ActivityProvider>
     </ThemeProvider>
   );
 }

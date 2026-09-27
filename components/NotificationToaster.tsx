@@ -7,85 +7,34 @@ import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { useActivity } from '@/context/ActivityContext';
+import { describeActivity } from '@/lib/activity';
 
 const TOAST_MS = 4000;
-const PREVIEW_LENGTH = 60;
 
-const NOTIFICATION_SELECT =
-  'id, type, post_id, actor:profiles!notifications_actor_id_fkey(username), comment:comments!notifications_comment_id_fkey(body)';
-
-type NotificationRow = {
-  id: string;
-  type: 'like' | 'comment';
-  post_id: string;
-  actor: { username: string } | null;
-  comment: { body: string } | null;
-};
-
-type Toast = { id: string; postId: string; text: string };
-
-function describe(row: NotificationRow): string {
-  const name = row.actor?.username ?? 'Someone';
-  if (row.type === 'like') return `${name} liked your post`;
-  const body = row.comment?.body ?? '';
-  const preview = body.length > PREVIEW_LENGTH ? `${body.slice(0, PREVIEW_LENGTH)}…` : body;
-  return preview ? `${name} commented: "${preview}"` : `${name} commented on your post`;
-}
-
-/** Listens for new likes/comments on the signed-in user's posts; honks and shows a banner. */
+/** Honks and shows a banner when someone likes or comments on the user's post while the app is open. */
 export function NotificationToaster() {
-  const { user } = useAuth();
-  const userId = user?.id;
+  const { latest } = useActivity();
   const router = useRouter();
   const { top } = useSafeAreaInsets();
   const horn = useAudioPlayer(require('@/assets/sounds/car_horn.wav'));
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [dismissedId, setDismissedId] = useState<string | null>(null);
+  const toast = latest && latest.id !== dismissedId ? latest : null;
+  const toastId = toast?.id;
 
   useEffect(() => {
-    if (!userId) return;
-    const channel = supabase
-      .channel(`notifications:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `recipient_id=eq.${userId}`,
-        },
-        async (payload) => {
-          // The realtime payload has ids only; fetch the actor name and comment text.
-          const { data, error } = await supabase
-            .from('notifications')
-            .select(NOTIFICATION_SELECT)
-            .eq('id', (payload.new as { id: string }).id)
-            .single();
-          if (error || !data) return;
-          const row = data as unknown as NotificationRow;
-          setToast({ id: row.id, postId: row.post_id, text: describe(row) });
-          horn.seekTo(0);
-          horn.play();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, horn]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    if (!toastId) return;
+    horn.seekTo(0);
+    horn.play();
+    const timer = setTimeout(() => setDismissedId(toastId), TOAST_MS);
     return () => clearTimeout(timer);
-  }, [toast]);
+  }, [toastId, horn]);
 
   if (!toast) return null;
+  const text = describeActivity(toast);
 
   const open = () => {
-    setToast(null);
+    setDismissedId(toast.id);
     router.push({ pathname: '/comments/[postId]', params: { postId: toast.postId } });
   };
 
@@ -100,13 +49,13 @@ export function NotificationToaster() {
         onPress={open}
         accessibilityRole="button"
         accessibilityLiveRegion="polite"
-        accessibilityLabel={`${toast.text}. Open post`}
+        accessibilityLabel={`${text}. Open post`}
         style={({ pressed }) => [styles.toast, pressed && styles.pressed]}>
         <View style={styles.icon}>
           <Ionicons name="car-sport" size={20} color={Colors.light.onTint} />
         </View>
         <Text style={styles.text} numberOfLines={2}>
-          {toast.text}
+          {text}
         </Text>
       </Pressable>
     </Animated.View>

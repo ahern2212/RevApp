@@ -1,27 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
+import {
+  BUCKET,
+  fetchFeedPage,
+  fetchSaved,
+  POST_SELECT,
+  toPost,
+  type FeedPage,
+  type PostRow,
+} from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 import type { Post, User } from '@/types';
-
-const BUCKET = 'post-images';
-const FEED_LIMIT = 100;
-
-// posts → profiles has two paths (author_id and via likes), so name the FK explicitly.
-const POST_SELECT =
-  'id, author_id, image_path, car, caption, created_at, author:profiles!posts_author_id_fkey(username), likes(user_id), comments(count)';
-
-type PostRow = {
-  id: string;
-  author_id: string;
-  image_path: string;
-  car: string;
-  caption: string;
-  created_at: string;
-  author: { username: string } | null;
-  likes: { user_id: string }[];
-  comments: { count: number }[];
-};
 
 type NewPost = { imageUri: string; mimeType?: string; caption: string; car: string };
 
@@ -29,39 +19,26 @@ type GarageContextValue = {
   ready: boolean;
   user: User | null;
   posts: Post[];
+  loadingPosts: boolean;
+  /** The latest feed load failed (e.g. offline); cleared by the next successful load. */
+  feedError: boolean;
   refreshing: boolean;
   refresh: () => Promise<void>;
+  hasMore: boolean;
+  loadingMore: boolean;
+  loadMore: () => Promise<void>;
   signOut: () => Promise<void>;
   addPost: (input: NewPost) => Promise<void>;
+  deletePost: (postId: string) => Promise<void>;
+  updateCaption: (postId: string, caption: string) => Promise<void>;
   toggleLike: (postId: string) => Promise<void>;
+  saved: Post[];
+  savedIds: Set<string>;
+  toggleSave: (postId: string) => Promise<void>;
   adjustCommentCount: (postId: string, delta: number) => void;
 };
 
 const GarageContext = createContext<GarageContextValue | null>(null);
-
-function toPost(row: PostRow): Post {
-  return {
-    id: row.id,
-    authorId: row.author_id,
-    authorName: row.author?.username ?? 'driver',
-    imageUri: supabase.storage.from(BUCKET).getPublicUrl(row.image_path).data.publicUrl,
-    caption: row.caption,
-    car: row.car,
-    createdAt: Date.parse(row.created_at),
-    likedBy: row.likes.map((like) => like.user_id),
-    commentCount: row.comments[0]?.count ?? 0,
-  };
-}
-
-async function fetchPosts(): Promise<Post[]> {
-  const { data, error } = await supabase
-    .from('posts')
-    .select(POST_SELECT)
-    .order('created_at', { ascending: false })
-    .limit(FEED_LIMIT);
-  if (error) throw error;
-  return (data as unknown as PostRow[]).map(toPost);
-}
 
 function setLiked(posts: Post[], postId: string, userId: string, liked: boolean): Post[] {
   return posts.map((post) => {
@@ -74,32 +51,78 @@ function setLiked(posts: Post[], postId: string, userId: string, liked: boolean)
 export function GarageProvider({ children }: { children: ReactNode }) {
   const { user, isLoading, signOut } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState<Omit<FeedPage, 'posts'>>({ cursor: null, hasMore: false });
+  // Which user's feed has finished its first load; the feed shows a spinner until it matches.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [feedError, setFeedError] = useState(false);
   const userId = user?.id;
+
+  const applyFirstPage = useCallback((first: FeedPage) => {
+    setPosts(first.posts);
+    setPage({ cursor: first.cursor, hasMore: first.hasMore });
+    setFeedError(false);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    fetchPosts()
-      .then((next) => {
-        if (!cancelled) setPosts(next);
+    fetchFeedPage()
+      .then((first) => {
+        if (!cancelled) applyFirstPage(first);
       })
-      .catch((error) => console.warn('Failed to load posts', error));
+      .catch((error) => {
+        console.warn('Failed to load posts', error);
+        if (!cancelled) setFeedError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedFor(userId);
+      });
+    // Loaded separately so a problem with saves never blanks the feed.
+    fetchSaved()
+      .then((next) => {
+        if (!cancelled) setSaved(next);
+      })
+      .catch((error) => console.warn('Failed to load saved posts', error));
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, applyFirstPage]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      setPosts(await fetchPosts());
-    } catch (error) {
-      console.warn('Failed to load posts', error);
+      const [first, nextSaved] = await Promise.allSettled([fetchFeedPage(), fetchSaved()]);
+      if (first.status === 'fulfilled') applyFirstPage(first.value);
+      else {
+        console.warn('Failed to load posts', first.reason);
+        setFeedError(true);
+      }
+      if (nextSaved.status === 'fulfilled') setSaved(nextSaved.value);
+      else console.warn('Failed to load saved posts', nextSaved.reason);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [applyFirstPage]);
+
+  const loadMore = useCallback(async () => {
+    if (!page.hasMore || loadingMore || refreshing) return;
+    setLoadingMore(true);
+    try {
+      const next = await fetchFeedPage(page.cursor);
+      setPosts((current) => {
+        const seen = new Set(current.map((post) => post.id));
+        return [...current, ...next.posts.filter((post) => !seen.has(post.id))];
+      });
+      setPage({ cursor: next.cursor, hasMore: next.hasMore });
+    } catch (error) {
+      console.warn('Failed to load more posts', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [page, loadingMore, refreshing]);
 
   const addPost = useCallback(
     async (input: NewPost) => {
@@ -129,6 +152,44 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     [userId]
   );
 
+  const deletePost = useCallback(
+    async (postId: string) => {
+      const post = posts.find((p) => p.id === postId) ?? saved.find((p) => p.id === postId);
+      if (!userId || !post || post.authorId !== userId) return;
+
+      // RLS turns a disallowed delete into "0 rows" rather than an error, so check the result.
+      const { data, error } = await supabase.from('posts').delete().eq('id', postId).select('id');
+      if (error) throw error;
+      if (!data?.length) {
+        throw new Error('The database did not allow this delete. Run the latest SQL migration.');
+      }
+      // Best effort: the post is already gone even if the photo cleanup fails.
+      const removal = await supabase.storage.from(BUCKET).remove([post.imagePath]);
+      if (removal.error) console.warn('Failed to delete photo', removal.error);
+
+      setPosts((current) => current.filter((p) => p.id !== postId));
+      setSaved((current) => current.filter((p) => p.id !== postId));
+    },
+    [posts, saved, userId]
+  );
+
+  const updateCaption = useCallback(async (postId: string, caption: string) => {
+    const next = caption.trim();
+    const { data, error } = await supabase
+      .from('posts')
+      .update({ caption: next })
+      .eq('id', postId)
+      .select('id');
+    if (error) throw error;
+    if (!data?.length) {
+      throw new Error('The database did not allow this edit. Run the latest SQL migration.');
+    }
+    const apply = (list: Post[]) =>
+      list.map((post) => (post.id === postId ? { ...post, caption: next } : post));
+    setPosts(apply);
+    setSaved(apply);
+  }, []);
+
   const toggleLike = useCallback(
     async (postId: string) => {
       if (!userId) return;
@@ -149,6 +210,34 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     [posts, userId]
   );
 
+  const toggleSave = useCallback(
+    async (postId: string) => {
+      if (!userId) return;
+      const existing = saved.find((post) => post.id === postId);
+      const post = existing ?? posts.find((p) => p.id === postId);
+      if (!post) return;
+
+      // Optimistic update; roll back if the write fails.
+      setSaved((current) =>
+        existing ? current.filter((p) => p.id !== postId) : [post, ...current]
+      );
+      const { error } = existing
+        ? await supabase.from('saved_posts').delete().eq('post_id', postId).eq('user_id', userId)
+        : await supabase
+            .from('saved_posts')
+            .upsert({ post_id: postId, user_id: userId }, { ignoreDuplicates: true });
+      if (error) {
+        console.warn('Failed to update save', error);
+        setSaved((current) =>
+          existing ? [post, ...current] : current.filter((p) => p.id !== postId)
+        );
+      }
+    },
+    [posts, saved, userId]
+  );
+
+  const savedIds = useMemo(() => new Set(saved.map((post) => post.id)), [saved]);
+
   // Keeps the feed's comment count in sync after commenting on the comments screen.
   const adjustCommentCount = useCallback((postId: string, delta: number) => {
     setPosts((current) =>
@@ -165,14 +254,45 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       ready: !isLoading,
       user,
       posts,
+      loadingPosts: !!userId && loadedFor !== userId,
+      feedError,
       refreshing,
       refresh,
+      hasMore: page.hasMore,
+      loadingMore,
+      loadMore,
       signOut,
       addPost,
+      deletePost,
+      updateCaption,
       toggleLike,
+      saved,
+      savedIds,
+      toggleSave,
       adjustCommentCount,
     }),
-    [isLoading, user, posts, refreshing, refresh, signOut, addPost, toggleLike, adjustCommentCount]
+    [
+      isLoading,
+      user,
+      userId,
+      posts,
+      loadedFor,
+      feedError,
+      refreshing,
+      refresh,
+      page.hasMore,
+      loadingMore,
+      loadMore,
+      signOut,
+      addPost,
+      deletePost,
+      updateCaption,
+      toggleLike,
+      saved,
+      savedIds,
+      toggleSave,
+      adjustCommentCount,
+    ]
   );
 
   return <GarageContext.Provider value={value}>{children}</GarageContext.Provider>;

@@ -1,49 +1,349 @@
-import { useRouter } from 'expo-router';
-import { FlatList, StyleSheet, Text } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter, useScrollToTop } from 'expo-router';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, type FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FeedHeader, useFeedHeaderHeight } from '@/components/FeedHeader';
+import { OptionsSheet } from '@/components/OptionsSheet';
 import { PostCard } from '@/components/PostCard';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
+import { confirm, showError } from '@/lib/confirm';
+import { useTabBarSpace } from '@/lib/layout';
+import { sharePost } from '@/lib/share';
+import { useNewPostsCount } from '@/lib/useNewPostsCount';
+import type { Post } from '@/types';
+
+const SNAP_MS = 180;
 
 export default function FeedScreen() {
-  const { posts, user, toggleLike, refreshing, refresh } = useGarage();
+  const {
+    posts,
+    user,
+    loadingPosts,
+    feedError,
+    toggleLike,
+    savedIds,
+    toggleSave,
+    deletePost,
+    refreshing,
+    refresh,
+    hasMore,
+    loadingMore,
+    loadMore,
+  } = useGarage();
   const router = useRouter();
+  const { top } = useSafeAreaInsets();
+  const headerHeight = useFeedHeaderHeight();
+  const tabBarSpace = useTabBarSpace();
+  const newPosts = useNewPostsCount(posts[0]?.createdAt ?? null);
+  const [optionsFor, setOptionsFor] = useState<Post | null>(null);
+
+  const openProfile = (post: Post) =>
+    router.push({
+      pathname: '/user/[userId]',
+      params: { userId: post.authorId, name: post.authorName },
+    });
+
+  const share = (post: Post) =>
+    sharePost(post).catch((error) => showError('Could not share', error));
+
+  const remove = async (post: Post) => {
+    const ok = await confirm(
+      'Delete this post?',
+      'The photo, likes and comments will be removed for everyone. This can’t be undone.',
+      'Delete'
+    );
+    if (!ok) return;
+    try {
+      await deletePost(post.id);
+    } catch (error) {
+      showError('Could not delete', error);
+    }
+  };
+
+  // On iOS the list is pushed below the header with contentInset (so pull-to-refresh
+  // shows under the header), which makes scroll offsets start at -headerHeight.
+  const isIOS = Platform.OS === 'ios';
+  const insetOffset = isIOS ? headerHeight : 0;
+
+  // 0 = header fully shown, -headerHeight = fully hidden.
+  const shift = useSharedValue(0);
+  const lastY = useSharedValue(0);
+
+  const snap = (y: number) => {
+    'worklet';
+    const current = shift.get();
+    if (current === 0 || current === -headerHeight) return;
+    const hide = current < -headerHeight / 2 && y > headerHeight;
+    shift.set(withTiming(hide ? -headerHeight : 0, { duration: SNAP_MS }));
+  };
+
+  // Tapping the Feed tab while on it scrolls to the top and brings the header back.
+  const listRef = useRef<FlatList<Post>>(null);
+  const scrollTarget = useRef({
+    scrollToTop: () => {
+      shift.set(withTiming(0, { duration: SNAP_MS }));
+      listRef.current?.scrollToOffset({ offset: -insetOffset, animated: true });
+    },
+  });
+  useScrollToTop(scrollTarget);
+
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const y = event.contentOffset.y + insetOffset;
+      const dy = y - lastY.get();
+      lastY.set(y);
+      if (y <= 0) {
+        shift.set(0); // at (or pulled past) the top: always show the header
+        return;
+      }
+      // Ignore the bounce past the bottom so it doesn't pop the header back in.
+      if (event.contentOffset.y > event.contentSize.height - event.layoutMeasurement.height) return;
+      shift.set(Math.min(0, Math.max(-headerHeight, shift.get() - dy)));
+    },
+    onEndDrag: (event) => snap(event.contentOffset.y + insetOffset),
+    onMomentumEnd: (event) => snap(event.contentOffset.y + insetOffset),
+  });
+
+  const headerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: shift.get() }],
+  }));
+
+  // The "new posts" pill rides just below the header, and stops under the status bar
+  // once the header has scrolled away.
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: Math.max(shift.get(), top - headerHeight) }],
+  }));
+
+  const showNewPosts = () => {
+    scrollTarget.current.scrollToTop();
+    refresh();
+  };
+
+  // Fades in a page-colored strip behind the status bar as the header leaves.
+  const statusBarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(shift.get(), [-Math.max(top, 1), 0], [1, 0], Extrapolation.CLAMP),
+  }));
 
   return (
-    <FlatList
-      data={posts}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <PostCard
-          post={item}
-          liked={!!user && item.likedBy.includes(user.id)}
-          onLike={() => toggleLike(item.id)}
-          onComment={() =>
-            router.push({ pathname: '/comments/[postId]', params: { postId: item.id } })
-          }
-        />
-      )}
-      refreshing={refreshing}
-      onRefresh={refresh}
-      ListEmptyComponent={
-        <Text style={styles.empty}>No posts yet. Be the first to share your build.</Text>
-      }
-      style={styles.list}
-      contentContainerStyle={styles.content}
-    />
+    <View style={styles.wrap}>
+      <Animated.FlatList
+        ref={listRef}
+        data={posts}
+        keyExtractor={(item: Post) => item.id}
+        renderItem={({ item }: { item: Post }) => (
+          <PostCard
+            post={item}
+            liked={!!user && item.likedBy.includes(user.id)}
+            onLike={() => toggleLike(item.id)}
+            onComment={() =>
+              router.push({ pathname: '/comments/[postId]', params: { postId: item.id } })
+            }
+            saved={savedIds.has(item.id)}
+            onSave={() => toggleSave(item.id)}
+            onShare={() => share(item)}
+            onAuthorPress={() => openProfile(item)}
+            onLikesPress={() =>
+              router.push({ pathname: '/likes/[postId]', params: { postId: item.id } })
+            }
+            onOptions={item.authorId === user?.id ? () => setOptionsFor(item) : undefined}
+          />
+        )}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        refreshing={refreshing}
+        onRefresh={refresh}
+        progressViewOffset={headerHeight}
+        automaticallyAdjustContentInsets={false}
+        contentInset={isIOS ? { top: headerHeight } : undefined}
+        contentOffset={isIOS ? { x: 0, y: -headerHeight } : undefined}
+        scrollIndicatorInsets={isIOS ? { top: headerHeight } : undefined}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.6}
+        ListEmptyComponent={
+          loadingPosts ? (
+            <ActivityIndicator color={Colors.light.tint} style={styles.loading} />
+          ) : feedError ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.empty}>Couldn’t load the feed. Check your connection.</Text>
+              <Text style={styles.retry} onPress={refresh} accessibilityRole="button">
+                Try again
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyBox}>
+              <Text style={styles.empty}>No posts yet. Be the first to share your build.</Text>
+              <Text
+                style={styles.cta}
+                onPress={() => router.push('/post')}
+                accessibilityRole="button">
+                Share your first build
+              </Text>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator color={Colors.light.tint} style={styles.footer} />
+          ) : !hasMore && posts.length > 0 ? (
+            <Text style={styles.end}>You’re all caught up 🏁</Text>
+          ) : null
+        }
+        style={styles.list}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: tabBarSpace },
+          !isIOS && { paddingTop: headerHeight },
+        ]}
+      />
+      <Animated.View style={[styles.header, headerStyle]}>
+        <FeedHeader />
+      </Animated.View>
+      {newPosts > 0 ? (
+        <Animated.View
+          pointerEvents="box-none"
+          style={[styles.pillWrap, { top: headerHeight + 10 }, pillStyle]}>
+          <Pressable
+            onPress={showNewPosts}
+            accessibilityRole="button"
+            accessibilityLabel={`Show ${newPosts} new ${newPosts === 1 ? 'post' : 'posts'}`}
+            style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}>
+            <Ionicons name="arrow-up" size={14} color={Colors.light.onTint} />
+            <Text style={styles.pillText}>
+              {newPosts > 9 ? '9+' : newPosts} new {newPosts === 1 ? 'post' : 'posts'}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      ) : null}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.statusBar, { height: top }, statusBarStyle]}
+      />
+      <OptionsSheet
+        visible={optionsFor !== null}
+        onClose={() => setOptionsFor(null)}
+        options={
+          optionsFor
+            ? [
+                {
+                  label: 'Edit caption',
+                  icon: 'create-outline',
+                  onPress: () =>
+                    router.push({
+                      pathname: '/edit-post/[postId]',
+                      params: { postId: optionsFor.id },
+                    }),
+                },
+                { label: 'Share', icon: 'paper-plane-outline', onPress: () => share(optionsFor) },
+                {
+                  label: 'Delete post',
+                  icon: 'trash-outline',
+                  destructive: true,
+                  onPress: () => remove(optionsFor),
+                },
+              ]
+            : []
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: {
+  wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,
   },
+  list: {
+    flex: 1,
+  },
   content: {
-    paddingBottom: 32,
     maxWidth: 640,
     width: '100%',
     alignSelf: 'center',
+  },
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  pillWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 12,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.light.tint,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    shadowColor: Colors.light.text,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  pillPressed: {
+    opacity: 0.85,
+  },
+  pillText: {
+    color: Colors.light.onTint,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  statusBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 11,
+    backgroundColor: Colors.light.background,
+  },
+  loading: {
+    marginTop: 48,
+  },
+  emptyBox: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  cta: {
+    color: Colors.light.onTint,
+    backgroundColor: Colors.light.tint,
+    fontWeight: '800',
+    borderRadius: 12,
+    overflow: 'hidden',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  retry: {
+    color: Colors.light.tint,
+    fontWeight: '800',
+    padding: 8,
+  },
+  footer: {
+    marginVertical: 20,
+  },
+  end: {
+    color: Colors.light.muted,
+    textAlign: 'center',
+    marginVertical: 20,
   },
   empty: {
     color: Colors.light.muted,

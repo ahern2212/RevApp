@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -6,6 +7,10 @@ import { useAuth } from '@/context/AuthContext';
 
 type Mode = 'signIn' | 'signUp';
 
+// Same rules the database applies to handles (lowercase letters, numbers, . and _),
+// enforced while typing so what you see is what you get.
+const cleanHandle = (text: string) => text.toLowerCase().replace(/[^a-z0-9_.]/g, '').slice(0, 24);
+
 export function SetupScreen() {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>('signIn');
@@ -13,6 +18,7 @@ export function SetupScreen() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -50,11 +56,12 @@ export function SetupScreen() {
       {isSignUp ? (
         <TextInput
           value={username}
-          onChangeText={setUsername}
+          onChangeText={(text) => setUsername(cleanHandle(text))}
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="your handle"
+          placeholder="your handle (letters, numbers, . and _)"
           placeholderTextColor={Colors.light.placeholder}
+          accessibilityLabel="Handle"
           style={styles.input}
         />
       ) : null}
@@ -69,16 +76,33 @@ export function SetupScreen() {
         placeholderTextColor={Colors.light.placeholder}
         style={styles.input}
       />
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete={isSignUp ? 'new-password' : 'current-password'}
-        placeholder="password (6+ characters)"
-        placeholderTextColor={Colors.light.placeholder}
-        style={styles.input}
-        onSubmitEditing={() => canSubmit && submit()}
-      />
+      <View style={styles.passwordRow}>
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete={isSignUp ? 'new-password' : 'current-password'}
+          placeholder="password (6+ characters)"
+          placeholderTextColor={Colors.light.placeholder}
+          accessibilityLabel="Password"
+          style={[styles.input, styles.passwordInput]}
+          onSubmitEditing={() => canSubmit && submit()}
+        />
+        <Pressable
+          onPress={() => setShowPassword((shown) => !shown)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+          style={styles.eye}>
+          <Ionicons
+            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color={Colors.light.muted}
+          />
+        </Pressable>
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
       <Pressable
@@ -102,6 +126,17 @@ export function SetupScreen() {
 }
 
 const styles = StyleSheet.create({
+  passwordRow: {
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eye: {
+    position: 'absolute',
+    right: 14,
+    top: 14,
+  },
   wrap: {
     flex: 1,
     backgroundColor: Colors.light.background,

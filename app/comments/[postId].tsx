@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams } from 'expo-router';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -15,8 +16,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/Avatar';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
+import { confirm, showError } from '@/lib/confirm';
 import {
   addComment,
   type Comment,
@@ -24,27 +27,33 @@ import {
   deleteComment,
   fetchComments,
 } from '@/lib/comments';
+import { fetchPost } from '@/lib/posts';
 import { timeAgo } from '@/lib/time';
+import type { Post } from '@/types';
 
 function CommentRow({
   name,
+  userId,
   body,
   createdAt,
+  onNamePress,
   onDelete,
 }: {
   name: string;
+  userId?: string;
   body: string;
   createdAt: number;
+  onNamePress?: () => void;
   onDelete?: () => void;
 }) {
   return (
     <View style={styles.row}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarLetter}>{name.slice(0, 1).toUpperCase()}</Text>
-      </View>
+      <Avatar name={name} userId={userId} size={32} />
       <View style={styles.rowBody}>
         <Text style={styles.body}>
-          <Text style={styles.username}>{name} </Text>
+          <Text style={styles.username} onPress={onNamePress}>
+            {name}{' '}
+          </Text>
           {body}
         </Text>
         <Text style={styles.meta}>{timeAgo(createdAt)}</Text>
@@ -64,13 +73,31 @@ function CommentRow({
 
 export default function CommentsScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
-  const { posts, user, adjustCommentCount } = useGarage();
+  const { posts, saved, user, adjustCommentCount } = useGarage();
   const { bottom } = useSafeAreaInsets();
-  const post = posts.find((p) => p.id === postId);
+  const router = useRouter();
+  // Use the copy the app already has (feed or saves); otherwise fetch it, e.g. when opened
+  // from someone's profile grid or the Activity list.
+  const known = posts.find((p) => p.id === postId) ?? saved.find((p) => p.id === postId);
+  const knownId = known?.id;
+  const [fetched, setFetched] = useState<Post | null>(null);
+  const post = known ?? (fetched?.id === postId ? fetched : undefined);
+
+  useEffect(() => {
+    if (knownId) return;
+    let cancelled = false;
+    fetchPost(postId)
+      .then((next) => !cancelled && setFetched(next))
+      .catch((error) => console.warn('Failed to load post', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [postId, knownId]);
 
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,21 +122,25 @@ export default function CommentsScreen() {
       adjustCommentCount(postId, 1);
       setDraft('');
     } catch (error) {
-      Alert.alert('Could not comment', error instanceof Error ? error.message : 'Please try again.');
+      showError('Could not comment', error);
     } finally {
       setSending(false);
     }
   };
 
   const remove = async (commentId: string) => {
+    if (!(await confirm('Delete comment?', 'This can’t be undone.', 'Delete'))) return;
     try {
       await deleteComment(commentId);
       setComments((current) => (current ?? []).filter((c) => c.id !== commentId));
       adjustCommentCount(postId, -1);
     } catch (error) {
-      Alert.alert('Could not delete', error instanceof Error ? error.message : 'Please try again.');
+      showError('Could not delete', error);
     }
   };
+
+  const openProfile = (userId: string, name: string) =>
+    router.push({ pathname: '/user/[userId]', params: { userId, name } });
 
   const canSend = draft.trim().length > 0 && !sending;
 
@@ -124,9 +155,27 @@ export default function CommentsScreen() {
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
-          post?.caption ? (
+          post ? (
             <View style={styles.captionBlock}>
-              <CommentRow name={post.authorName} body={post.caption} createdAt={post.createdAt} />
+              <Pressable
+                onPress={() => setViewerOpen(true)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={post.car ? `Photo of ${post.car}. View full screen` : 'View photo full screen'}>
+                <Image
+                  source={{ uri: post.imageUri }}
+                  style={styles.photo}
+                  contentFit="cover"
+                  transition={150}
+                />
+              </Pressable>
+              {post.car ? <Text style={styles.car}>{post.car}</Text> : null}
+              <CommentRow
+                name={post.authorName}
+                userId={post.authorId}
+                body={post.caption || 'shared a build'}
+                createdAt={post.createdAt}
+                onNamePress={() => openProfile(post.authorId, post.authorName)}
+              />
             </View>
           ) : null
         }
@@ -143,8 +192,10 @@ export default function CommentsScreen() {
         renderItem={({ item }) => (
           <CommentRow
             name={item.authorName}
+            userId={item.authorId}
             body={item.body}
             createdAt={item.createdAt}
+            onNamePress={() => openProfile(item.authorId, item.authorName)}
             onDelete={item.authorId === user?.id ? () => remove(item.id) : undefined}
           />
         )}
@@ -173,6 +224,24 @@ export default function CommentsScreen() {
           )}
         </Pressable>
       </View>
+      {post ? (
+        <Modal
+          visible={viewerOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setViewerOpen(false)}>
+          <Pressable
+            style={styles.viewer}
+            onPress={() => setViewerOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close photo">
+            <Image source={{ uri: post.imageUri }} style={styles.viewerImage} contentFit="contain" />
+            <View style={styles.viewerClose}>
+              <Ionicons name="close" size={26} color="#ffffff" />
+            </View>
+          </Pressable>
+        </Modal>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -190,7 +259,36 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexGrow: 1,
   },
+  viewer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.94)',
+    justifyContent: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  viewerClose: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
+  },
+  photo: {
+    width: '100%',
+    aspectRatio: 4 / 5,
+    maxHeight: 520,
+    borderRadius: 14,
+    backgroundColor: Colors.light.imagePlaceholder,
+    marginBottom: 12,
+  },
+  car: {
+    color: Colors.light.tint,
+    fontWeight: '800',
+    fontSize: 16,
+    marginBottom: 10,
+  },
   captionBlock: {
+    gap: 0,
     paddingBottom: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.light.border,
@@ -199,18 +297,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.light.avatar,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: {
-    color: Colors.light.text,
-    fontWeight: '700',
   },
   rowBody: {
     flex: 1,

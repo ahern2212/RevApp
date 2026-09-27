@@ -48,7 +48,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "deploy:web": "node scripts/deploy-web.mjs",
-    "deploy:web:watch": "node scripts/deploy-web.mjs --watch"
+    "deploy:web:watch": "node scripts/deploy-web.mjs --watch",
+    "test": "node --experimental-strip-types --no-warnings --test \"tests/**/*.test.mts\""
   },
   "private": true
 }
