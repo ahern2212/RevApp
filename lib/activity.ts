@@ -20,7 +20,7 @@ type ActivityRow = {
   post: { image_path: string } | null;
 };
 
-export type ActivityType = 'like' | 'comment' | 'follow';
+export type ActivityType = 'like' | 'comment' | 'follow' | 'mention';
 
 export type Activity = {
   id: string;
@@ -55,6 +55,11 @@ export function describeActivity(activity: Activity): string {
   if (activity.type === 'follow') return `${activity.actorName} started following you`;
   const body = activity.commentBody ?? '';
   const preview = body.length > PREVIEW_LENGTH ? `${body.slice(0, PREVIEW_LENGTH)}…` : body;
+  if (activity.type === 'mention') {
+    return preview
+      ? `${activity.actorName} mentioned you: "${preview}"`
+      : `${activity.actorName} mentioned you in a post`;
+  }
   return preview
     ? `${activity.actorName} commented: "${preview}"`
     : `${activity.actorName} commented on your post`;
