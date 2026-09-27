@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, useScrollToTop } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   type FlatList,
@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CarOfTheWeek } from '@/components/CarOfTheWeek';
 import { Chip } from '@/components/Chip';
 import { FeedHeader, useFeedHeaderHeight } from '@/components/FeedHeader';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
@@ -31,6 +32,7 @@ import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
 import { useTabBarSpace } from '@/lib/layout';
+import { fetchCarOfTheWeek } from '@/lib/posts';
 import { sharePost } from '@/lib/share';
 import { useNewPostsCount } from '@/lib/useNewPostsCount';
 import type { Post } from '@/types';
@@ -67,13 +69,29 @@ export default function FeedScreen() {
   const newPosts = useNewPostsCount(feedMode === 'all' ? (posts[0]?.createdAt ?? null) : null);
   const [optionsFor, setOptionsFor] = useState<Post | null>(null);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const { openReport, reportSheet } = useReportSheet((target) =>
-    forgetPosts((post) => post.id === target.id)
-  );
+  const [topPost, setTopPost] = useState<Post | null>(null);
+
+  const loadTopPost = useCallback(() => {
+    fetchCarOfTheWeek()
+      .then(setTopPost)
+      .catch((error) => console.warn('Failed to load car of the week', error));
+  }, []);
+  useEffect(loadTopPost, [loadTopPost]);
+
+  const onRefresh = () => {
+    refresh();
+    loadTopPost();
+  };
+
+  const { openReport, reportSheet } = useReportSheet((target) => {
+    forgetPosts((post) => post.id === target.id);
+    setTopPost((top) => (top?.id === target.id ? null : top));
+  });
 
   const block = async (post: Post) => {
     if (await confirmBlock(post.authorId, post.authorName)) {
       forgetPosts((p) => p.authorId === post.authorId);
+      setTopPost((top) => (top?.authorId === post.authorId ? null : top));
     }
   };
 
@@ -190,7 +208,7 @@ export default function FeedScreen() {
 
   const showNewPosts = () => {
     scrollTarget.current.scrollToTop();
-    refresh();
+    onRefresh();
   };
 
   // Fades in a page-colored strip behind the status bar as the header leaves.
@@ -229,7 +247,7 @@ export default function FeedScreen() {
         viewabilityConfig={VIEWABILITY}
         onViewableItemsChanged={onViewableItemsChanged}
         refreshing={refreshing}
-        onRefresh={refresh}
+        onRefresh={onRefresh}
         progressViewOffset={headerHeight}
         automaticallyAdjustContentInsets={false}
         contentInset={isIOS ? { top: headerHeight } : undefined}
@@ -238,15 +256,25 @@ export default function FeedScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={0.6}
         ListHeaderComponent={
-          <View style={styles.modes} accessibilityRole="tablist">
-            <Chip label="Everyone" icon="globe-outline" active={feedMode === 'all'} onPress={() => setFeedMode('all')} />
-            <Chip
-              label="Following"
-              icon="people-outline"
-              active={feedMode === 'following'}
-              onPress={() => setFeedMode('following')}
-            />
-          </View>
+          <>
+            <View style={styles.modes} accessibilityRole="tablist">
+              <Chip label="Everyone" icon="globe-outline" active={feedMode === 'all'} onPress={() => setFeedMode('all')} />
+              <Chip
+                label="Following"
+                icon="people-outline"
+                active={feedMode === 'following'}
+                onPress={() => setFeedMode('following')}
+              />
+            </View>
+            {feedMode === 'all' && topPost ? (
+              <CarOfTheWeek
+                post={topPost}
+                onPress={() =>
+                  router.push({ pathname: '/comments/[postId]', params: { postId: topPost.id } })
+                }
+              />
+            ) : null}
+          </>
         }
         ListEmptyComponent={
           loadingPosts ? (

@@ -92,6 +92,18 @@ export async function fetchFeedPage(cursor?: string | null, mode: FeedMode = 'al
   };
 }
 
+/** The most-liked post of the last 7 days (null if nothing was liked, or before the migration). */
+export async function fetchCarOfTheWeek(): Promise<Post | null> {
+  const { data, error } = await withPostSelect((select) =>
+    supabase.rpc('car_of_the_week').select(select).maybeSingle()
+  );
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883') return null;
+    throw error;
+  }
+  return data ? toPost(data as unknown as PostRow) : null;
+}
+
 /** Every post by one user, newest first. */
 export async function fetchUserPosts(authorId: string): Promise<Post[]> {
   const { data, error } = await withPostSelect((select) =>
