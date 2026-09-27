@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEvent } from 'expo';
 import { Image } from 'expo-image';
 import { useIsFocused } from 'expo-router';
 import { useVideoPlayer, type VideoPlayer, VideoView } from 'expo-video';
 import { useEffect, useState } from 'react';
-import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Platform, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useVideoMuted } from '@/lib/videoSound';
 
@@ -32,8 +33,11 @@ export function PostVideo({ uri, posterUri, active, controls = false, style }: P
     p.loop = true;
     p.muted = muted;
   });
-  const [shownFor, setShownFor] = useState<string | null>(null);
-  const firstFrameShown = playing && shownFor === uri;
+  // Keep the poster on top until this player has drawn a frame, so there's no black flash.
+  // The web player can miss its first-frame event, so there "playing" also counts.
+  const [shownFor, setShownFor] = useState<VideoPlayer | null>(null);
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+  const firstFrameShown = playing && (shownFor === player || (Platform.OS === 'web' && isPlaying));
 
   useEffect(() => {
     if (playing) player.play();
@@ -55,7 +59,8 @@ export function PostVideo({ uri, posterUri, active, controls = false, style }: P
             style={StyleSheet.absoluteFill}
             contentFit={controls ? 'contain' : 'cover'}
             nativeControls={controls}
-            onFirstFrameRender={() => setShownFor(uri)}
+            playsInline
+            onFirstFrameRender={() => setShownFor(player)}
           />
         </View>
       ) : null}

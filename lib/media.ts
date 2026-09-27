@@ -28,6 +28,10 @@ export type PickedMedia = {
 
 const JPEG_QUALITY = 0.85;
 
+// iOS: hand over H.264 instead of HEVC video (and JPEG instead of HEIC), so what iPhones
+// post plays on Android phones and in every browser. Ignored on Android and web.
+const COMPATIBLE = ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible;
+
 export type PhotoOptions = {
   /** Let the user crop to a square first (market listings, profile pictures). */
   square?: boolean;
@@ -105,6 +109,7 @@ export async function pickPhoto(options: PhotoOptions = {}): Promise<PickedMedia
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     quality: 1,
+    preferredAssetRepresentationMode: COMPATIBLE,
     ...(options.square ? { allowsEditing: true, aspect: [1, 1] as [number, number] } : {}),
   });
   if (result.canceled || !result.assets[0]) return null;
@@ -116,6 +121,7 @@ export async function pickPostMedia(): Promise<PickedMedia | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images', 'videos'],
     quality: 1,
+    preferredAssetRepresentationMode: COMPATIBLE,
     videoMaxDuration: VIDEO_MAX_SECONDS,
   });
   if (result.canceled || !result.assets[0]) return null;
