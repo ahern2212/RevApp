@@ -24,7 +24,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Car pages** — every garage car has its own page (photo, mods, owner) with a build log of the posts it's tagged in; tag one of your cars when posting and the car name in the feed links to it
 - **Search** — magnifier in the feed header finds drivers by username and builds by car or caption; before you type it's an Explore page: the week's trending #tags, drivers to follow (people your follows follow, then the most followed; one-tap Follow) and a grid of the most-liked posts of the last two weeks
 - **Activity** — heart button in the feed header lists likes, comments, new followers and mentions, with an unread badge
-- **Notifications** — car-horn pop-up while the app is open; push notifications with the horn sound when it's closed (development/store builds only)
+- **Notifications** — car-horn pop-up while the app is open; push notifications with the horn sound when it's closed (development/store builds only); Edit profile → Notifications turns pushes on or off for likes, comments, mentions, new followers and messages (Activity and the inbox still show everything)
 - **Forums** — threads in General, Builds, Tech Help, Meets and Off-Topic, with replies; search, sort (Active / New / Top / Unanswered), "Mine" and category filters
 - **Market** — buy and sell cars, parts, wheels and accessories: 2-column glass grid with price badges, search, category chips, price sorting, sold items; listing pages with seller card and contact line; sellers mark items sold or delete them
 - **About** — story, features, community guidelines and a feedback shortcut

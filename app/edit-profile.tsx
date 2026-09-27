@@ -185,9 +185,18 @@ export default function EditProfileScreen() {
       </Pressable>
 
       <Pressable
-        onPress={() => router.push('/blocked')}
+        onPress={() => router.push('/notification-settings')}
         accessibilityRole="button"
         style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}>
+        <Ionicons name="notifications-outline" size={20} color={Colors.light.tint} />
+        <Text style={styles.linkRowText}>Notifications</Text>
+        <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push('/blocked')}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.linkRow, styles.linkRowNext, pressed && styles.linkRowPressed]}>
         <Ionicons name="ban-outline" size={20} color={Colors.light.tint} />
         <Text style={styles.linkRowText}>Blocked accounts</Text>
         <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
@@ -352,6 +361,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
     backgroundColor: Colors.light.card,
+  },
+  linkRowNext: {
+    marginTop: 10,
   },
   linkRowPressed: {
     opacity: 0.8,

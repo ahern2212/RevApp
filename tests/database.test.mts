@@ -509,3 +509,28 @@ test('explore and suggestions respect follows and blocks', async () => {
   const carolSuggestions = (await as(carol, () => q(`select id from suggested_drivers(10)`))).map((row) => row.id);
   assert.ok(!carolSuggestions.includes(bob), 'never someone on either side of a block');
 });
+
+test('notification settings turn off pushes but keep Activity and the inbox current', async () => {
+  const { alice, bob, dave } = users;
+  // Dave has a device registered and turns off like and message pushes.
+  await as(dave, () => q(`insert into notification_settings (likes, messages) values (false, false)`));
+  const davePost = await post(dave);
+  const pushesBefore = await count(`select count(*) as n from net.calls`);
+  await as(alice, () => q(`insert into likes (post_id) values ($1)`, [davePost]));
+  assert.equal(
+    await count(`select count(*) as n from notifications where type = 'like' and post_id = $1`, [davePost]),
+    1,
+    'still in Activity'
+  );
+  const [{ start_conversation: chat }] = await as(bob, () => q(`select start_conversation($1)`, [dave]));
+  await as(bob, () => q(`insert into messages (conversation_id, body) values ($1, 'quiet please')`, [chat]));
+  const [conv] = await as(dave, () => q(`select last_message from conversations where id = $1`, [chat]));
+  assert.equal(conv.last_message, 'quiet please', 'inbox preview still updates');
+  assert.equal(await count(`select count(*) as n from net.calls`), pushesBefore, 'no pushes sent');
+
+  await as(bob, () => q(`insert into comments (post_id, body) values ($1, 'nice')`, [davePost]));
+  assert.equal(await count(`select count(*) as n from net.calls`), pushesBefore + 1, 'comments still push');
+
+  assert.equal((await as(alice, () => q(`select * from notification_settings`))).length, 0, 'settings are private');
+  assert.ok(await fails(() => as(alice, () => q(`select wants_push($1, 'like')`, [dave]))), 'not callable by users');
+});
