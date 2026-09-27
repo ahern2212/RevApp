@@ -13,7 +13,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Saves** — bookmark any post; private "Saved" section on your profile
 - **Share** — system share sheet (or copy link on desktop browsers)
 - **Profiles** — tap any username to see that person's garage; edit your username, bio and profile picture
-- **My Garage** — add your cars (year/make/model, nickname, mods, photo) and get a 2D side-view render in 11 model-style silhouettes (911-style, muscle, roadster, JDM, supercar, off-roader, coupe, sedan, hatch, SUV, truck), auto-matched from the make/model, with your paint, wheels and stance
+- **My Garage** — add your cars (year/make/model, nickname, mods) with a photo of each one
 - **Search** — magnifier in the feed header finds drivers by username and builds by car or caption
 - **Activity** — heart button in the feed header lists likes and comments on your posts, with an unread badge
 - **Notifications** — car-horn pop-up while the app is open; push notifications with the horn sound when it's closed (development/store builds only)
@@ -22,14 +22,14 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **About** — story, features, community guidelines and a feedback shortcut
 - **App colors** — five full palettes previewed live; voting for one also switches your device to it (the app restarts to repaint). The app-wide default is `DEFAULT_THEME_ID` in `constants/Colors.ts`
 - **Glass UI** — frosted translucent cards over soft theme-colored glows; real blur on the tab bar, notification banner and menus
-- **Events** — car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions, and see the garage cars of everyone going
+- **Events** — car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions, and see photos of the garage cars of everyone going
 
 ## Project layout
 
 | Path | What's there |
 | --- | --- |
 | `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Forums, Post, Market, About, Profile; `comments/` (post page), `user/`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes`, `market/new`, `market/[id]` are stacked screens |
-| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `CarRender`, `GarageSection`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
+| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `GarageSection`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache) |
 | `lib/` | Data + helpers: `supabase`, `posts`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
 | `constants/` | `themes.ts` (all palettes), `Colors.ts` (picks the active one), `glass.ts` (shared glass card style) |

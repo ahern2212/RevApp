@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CarRender } from '@/components/CarRender';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
@@ -14,7 +13,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 const FEATURES: { icon: IconName; title: string; text: string }[] = [
   { icon: 'images-outline', title: 'Share builds', text: 'Post your car, like and comment with the car button.' },
-  { icon: 'car-sport-outline', title: 'Your garage', text: 'Add your cars and get a custom render in your paint.' },
+  { icon: 'car-sport-outline', title: 'Your garage', text: 'Show off your cars with photos and your list of mods.' },
   { icon: 'map-outline', title: 'Meets', text: 'Find car meets on the map and see who’s rolling in.' },
   { icon: 'chatbubbles-outline', title: 'Forums', text: 'Ask for help, share builds, talk shop.' },
   { icon: 'storefront-outline', title: 'Market', text: 'Buy and sell cars, parts and wheels locally.' },
@@ -47,7 +46,7 @@ export default function AboutScreen() {
             A home for your builds, your crew and your next meet.
           </Text>
           <View style={styles.heroCar}>
-            <CarRender bodyStyle="jdm" paint={Colors.light.tint} wheels="#232228" stance="lowered" />
+            <Ionicons name="car-sport" size={72} color={Colors.light.tint} />
           </View>
         </View>
 
@@ -151,7 +150,7 @@ const styles = StyleSheet.create({
   },
   heroCar: {
     marginTop: 6,
-    paddingHorizontal: 8,
+    alignItems: 'center',
   },
   sectionTitle: {
     color: Colors.light.text,

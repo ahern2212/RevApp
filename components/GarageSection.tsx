@@ -4,47 +4,35 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CarRender } from '@/components/CarRender';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { type Car, carTitle, fetchCars } from '@/lib/cars';
-import { BODY_STYLE_LABELS, PAINT_COLORS, WHEEL_COLORS } from '@/lib/carShapes';
-
-const colorName = (list: { name: string; hex: string }[], hex: string) =>
-  list.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name ?? hex;
 
 function CarCard({ car, editable }: { car: Car; editable: boolean }) {
   const router = useRouter();
-  const [showPhoto, setShowPhoto] = useState(false);
+  const edit = () => router.push({ pathname: '/garage/edit', params: { carId: car.id } });
 
   return (
     <View style={styles.card}>
-      <View style={styles.stage}>
-        {showPhoto && car.photoUri ? (
-          <Image source={{ uri: car.photoUri }} style={styles.photo} contentFit="cover" transition={150} />
-        ) : (
-          <View style={styles.renderWrap}>
-            <CarRender bodyStyle={car.bodyStyle} paint={car.paint} wheels={car.wheels} stance={car.stance} />
-          </View>
-        )}
-        {car.photoUri ? (
-          <View style={styles.toggle}>
-            {(['Render', 'Photo'] as const).map((label) => {
-              const active = (label === 'Photo') === showPhoto;
-              return (
-                <Pressable
-                  key={label}
-                  onPress={() => setShowPhoto(label === 'Photo')}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  style={[styles.toggleItem, active && styles.toggleActive]}>
-                  <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-      </View>
+      {car.photoUri ? (
+        <Image
+          source={{ uri: car.photoUri }}
+          style={styles.photo}
+          contentFit="cover"
+          transition={150}
+          accessibilityLabel={`Photo of ${carTitle(car)}`}
+        />
+      ) : (
+        <Pressable
+          onPress={editable ? edit : undefined}
+          disabled={!editable}
+          accessibilityRole={editable ? 'button' : undefined}
+          accessibilityLabel={editable ? `Add a photo of ${carTitle(car)}` : undefined}
+          style={styles.noPhoto}>
+          <Ionicons name={editable ? 'camera-outline' : 'car-sport-outline'} size={36} color={Colors.light.tint} />
+          {editable ? <Text style={styles.noPhotoText}>Add a photo</Text> : null}
+        </Pressable>
+      )}
 
       <View style={styles.info}>
         <View style={styles.titleRow}>
@@ -56,7 +44,7 @@ function CarCard({ car, editable }: { car: Car; editable: boolean }) {
           </View>
           {editable ? (
             <Pressable
-              onPress={() => router.push({ pathname: '/garage/edit', params: { carId: car.id } })}
+              onPress={edit}
               accessibilityRole="button"
               accessibilityLabel={`Edit ${carTitle(car)}`}
               style={styles.edit}>
@@ -64,24 +52,6 @@ function CarCard({ car, editable }: { car: Car; editable: boolean }) {
               <Text style={styles.editText}>Edit</Text>
             </Pressable>
           ) : null}
-        </View>
-        <View style={styles.tags}>
-          <View style={styles.tag}>
-            <View style={[styles.swatch, { backgroundColor: car.paint }]} />
-            <Text style={styles.tagText}>{colorName(PAINT_COLORS, car.paint)}</Text>
-          </View>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>{BODY_STYLE_LABELS[car.bodyStyle]}</Text>
-          </View>
-          {car.stance !== 'stock' ? (
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>{car.stance === 'lowered' ? 'Lowered' : 'Lifted'}</Text>
-            </View>
-          ) : null}
-          <View style={styles.tag}>
-            <View style={[styles.swatch, { backgroundColor: car.wheels }]} />
-            <Text style={styles.tagText}>{colorName(WHEEL_COLORS, car.wheels)} wheels</Text>
-          </View>
         </View>
         {car.mods ? (
           <>
@@ -94,7 +64,7 @@ function CarCard({ car, editable }: { car: Car; editable: boolean }) {
   );
 }
 
-/** "Garage" block on a profile: the owner's cars with their renders. */
+/** "Garage" block on a profile: the owner's cars with their photos. */
 export function GarageSection({ ownerId, editable }: { ownerId: string; editable: boolean }) {
   const router = useRouter();
   const [cars, setCars] = useState<{ ownerId: string; list: Car[] } | null>(null);
@@ -147,13 +117,9 @@ export function GarageSection({ ownerId, editable }: { ownerId: string; editable
           onPress={() => router.push('/garage/edit')}
           accessibilityRole="button"
           style={({ pressed }) => [styles.empty, pressed && styles.pressed]}>
-          <View style={styles.emptyRender}>
-            <CarRender bodyStyle="coupe" paint="#d0bdf4" wheels="#c0c4cc" stance="stock" />
-          </View>
+          <Ionicons name="car-sport-outline" size={44} color={Colors.light.tint} />
           <Text style={styles.emptyTitle}>Add your car</Text>
-          <Text style={styles.emptyText}>
-            Pick the body style, paint and wheels to get your own custom render.
-          </Text>
+          <Text style={styles.emptyText}>Show off your ride with a photo and your list of mods.</Text>
         </Pressable>
       ) : null}
     </View>
@@ -189,42 +155,21 @@ const styles = StyleSheet.create({
     ...glass,
     overflow: 'hidden',
   },
-  stage: {
-    backgroundColor: '#f4f1fb',
-    aspectRatio: 16 / 9,
-    justifyContent: 'center',
-  },
-  renderWrap: {
-    paddingHorizontal: 16,
-  },
   photo: {
     width: '100%',
-    height: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: Colors.light.imagePlaceholder,
   },
-  toggle: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 999,
-    padding: 2,
+  noPhoto: {
+    aspectRatio: 16 / 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.light.imagePlaceholder,
   },
-  toggleItem: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  toggleActive: {
-    backgroundColor: Colors.light.tint,
-  },
-  toggleText: {
-    color: Colors.light.text,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  toggleTextActive: {
-    color: Colors.light.onTint,
+  noPhotoText: {
+    color: Colors.light.tint,
+    fontWeight: '800',
   },
   info: {
     padding: 14,
@@ -258,32 +203,6 @@ const styles = StyleSheet.create({
     color: Colors.light.tint,
     fontWeight: '800',
   },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: Colors.light.background,
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  swatch: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.15)',
-  },
-  tagText: {
-    color: Colors.light.text,
-    fontSize: 12,
-    fontWeight: '600',
-  },
   modsLabel: {
     color: Colors.light.muted,
     fontSize: 12,
@@ -300,7 +219,7 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     gap: 6,
-    padding: 16,
+    padding: 24,
     borderRadius: 16,
     borderWidth: 2,
     borderStyle: 'dashed',
@@ -308,10 +227,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.card,
   },
   pressed: {
-    opacity: 0.8,
-  },
-  emptyRender: {
-    width: '70%',
     opacity: 0.8,
   },
   emptyTitle: {
