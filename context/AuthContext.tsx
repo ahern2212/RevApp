@@ -1,6 +1,7 @@
 import { Session } from '@supabase/supabase-js';
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 
+import { unregisterPush } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@/types';
 
@@ -93,6 +94,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return { error: null, needsConfirmation: !data.session };
       },
       signOut: async () => {
+        // Stop pushes to this phone first; it needs the session to do so.
+        await unregisterPush().catch((error) => console.warn('Push unregister failed', error));
         await supabase.auth.signOut();
       },
     }),

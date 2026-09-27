@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
+import { NotificationToaster } from '@/components/NotificationToaster';
+import { PushNotifications } from '@/components/PushNotifications';
 import { SetupScreen } from '@/components/SetupScreen';
 import Colors from '@/constants/Colors';
 import { AuthProvider } from '@/context/AuthContext';
@@ -78,6 +80,8 @@ function RootLayoutNav() {
           options={{ presentation: 'modal', title: 'Comments', headerTitleStyle: { fontWeight: '800' } }}
         />
       </Stack>
+      <NotificationToaster />
+      <PushNotifications />
     </ThemeProvider>
   );
 }

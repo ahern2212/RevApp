@@ -24,7 +24,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "package": "com.garage.app"
     },
     "web": {
       "bundler": "metro",
@@ -45,6 +46,17 @@
         "expo-image-picker",
         {
           "photosPermission": "Garage needs photo access so you can post pictures of your car."
+        }
+      ],
+      "expo-audio",
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/car_horn.wav"
+          ],
+          "color": "#8458B3"
         }
       ]
     ],
