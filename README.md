@@ -41,9 +41,10 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache), `MessagesContext` (inbox + unread count, live) |
 | `lib/` | Data + helpers: `supabase`, `posts`, `media` (validated photo/video picker + upload check), `mediaRules` (upload limits, byte sniffing), `videoPoster`, `videoSound`, `safety` (reports, blocks), `follows`, `richText` (tag/mention tokenizer), `messages`, `chat` (unread/timestamp rules), `commentThreads`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
 | `constants/` | `themes.ts` (all palettes), `Colors.ts` (picks the active one), `glass.ts` (shared glass card style) |
-| `tests/` | Unit tests for pure helpers (`npm test`, Node's built-in runner) |
+| `tests/` | Unit tests for pure helpers, and `database.test.mts`: runs all migrations on PGlite with Supabase stand-ins and checks the security rules as real users (`npm test`, Node's built-in runner) |
 | `supabase/migrations/` | Database schema, run in order in the Supabase SQL Editor |
 | `scripts/deploy-web.mjs` | Publishes the website (see below) |
+| `scripts/print-migrations.mjs` | Prints migrations from a given one onward, for pasting into the SQL Editor |
 
 ## Setup
 
@@ -56,6 +57,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
    EXPO_PUBLIC_WEB_URL=https://garage.expo.app
    ```
 3. In the Supabase SQL Editor, run every file in `supabase/migrations/` in filename order (each one once).
+   To paste several at once, print them from the first one you still need, e.g. `node scripts/print-migrations.mjs 20260928000000 | clip` (Windows) or `| pbcopy` (macOS). Run `node scripts/print-migrations.mjs` to list them.
 
 ## Run it
 
@@ -64,7 +66,7 @@ npx expo start        # press w for web, or open on a phone
 npm run web           # web only
 npm run lint          # ESLint
 npx tsc --noEmit      # type-check
-npm test              # unit tests for pure helpers
+npm test              # unit tests + every migration run on an in-process Postgres (PGlite) with RLS checks
 ```
 
 `expo-dev-client` is installed, so `expo start` targets a development build by default; press **s** to switch to Expo Go.

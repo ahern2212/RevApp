@@ -11,23 +11,34 @@ alter table public.comments
 
 create index comments_parent_id_idx on public.comments (parent_id) where parent_id is not null;
 
+-- True when `parent` is a top-level comment on `post`. A policy on comments can't query
+-- comments itself (Postgres rejects that as infinite recursion), so this runs as a
+-- security definer function instead.
+create function public.is_reply_target(parent uuid, post uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.comments c
+    where c.id = parent and c.post_id = post and c.parent_id is null
+  );
+$$;
+
+revoke execute on function public.is_reply_target(uuid, uuid) from public, anon;
+grant execute on function public.is_reply_target(uuid, uuid) to authenticated;
+
 -- Same as 20260928010000_reports_and_blocks.sql, plus: a reply's parent is a top-level
--- comment on the same post that you can see.
+-- comment on the same post (which you can see, since the post check covers it).
 drop policy "users comment as themselves" on public.comments;
 create policy "users comment as themselves"
   on public.comments for insert to authenticated
   with check (
     author_id = (select auth.uid())
     and exists (select 1 from public.posts p where p.id = post_id)
-    and (
-      parent_id is null
-      or exists (
-        select 1 from public.comments parent
-        where parent.id = comments.parent_id
-          and parent.post_id = comments.post_id
-          and parent.parent_id is null
-      )
-    )
+    and (parent_id is null or public.is_reply_target(parent_id, post_id))
   );
 
 -- ─── Comment likes ─────────────────────────────────────────────────────────
