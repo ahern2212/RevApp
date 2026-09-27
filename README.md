@@ -69,6 +69,21 @@ npm run deploy:web:watch                # redeploy automatically 30s after you s
 npm run deploy:web -- --domain=garage   # first deploy only: choose garage.expo.app
 ```
 
+## CI/CD (GitHub Actions)
+
+| Workflow | Runs on | What it does |
+| --- | --- | --- |
+| `.github/workflows/ci.yml` | every pull request | `expo lint`, `tsc --noEmit`, `npm test`, and a web export to prove the site builds |
+| `.github/workflows/deploy.yml` | push to `main`, or manually | runs CI, then builds the website and publishes it to EAS Hosting (`eas deploy --prod`) |
+| `.github/workflows/build.yml` | a `v*` tag (e.g. `v1.2.0`), or manually | runs CI, then starts an EAS build (pick profile/platform when run manually; optional store submit) |
+
+One-time setup, in GitHub → Settings → Secrets and variables → Actions → **New repository secret**:
+
+- `EXPO_TOKEN` — create at expo.dev → Account settings → Access tokens
+- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` and optionally `EXPO_PUBLIC_WEB_URL` — the same values as your `.env` (used for the website build)
+
+Native builds on EAS don't see GitHub secrets: add the `EXPO_PUBLIC_*` values as EAS environment variables (expo.dev → your project → Environment variables) for the profiles you build.
+
 ## Phone builds (needed for push notifications)
 
 ```bash

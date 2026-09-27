@@ -1,0 +1,61 @@
+# Continuous deployment: after CI passes on main, publish the website to EAS
+# Hosting (the same thing `npm run deploy:web` does locally).
+#
+# Repository secrets needed (Settings → Secrets and variables → Actions):
+#   EXPO_TOKEN                     expo.dev → Account settings → Access tokens
+#   EXPO_PUBLIC_SUPABASE_URL       same values as your local .env
+#   EXPO_PUBLIC_SUPABASE_ANON_KEY
+#   EXPO_PUBLIC_WEB_URL            optional, e.g. https://garage.expo.app
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two production deploys at once; let the newest one finish last.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  web:
+    name: Deploy website
+    needs: ci
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Export web bundle
+        run: npx expo export --platform web
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_WEB_URL: ${{ secrets.EXPO_PUBLIC_WEB_URL }}
+
+      - name: Deploy to EAS Hosting
+        id: deploy
+        run: |
+          eas deploy --prod --non-interactive | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.expo\.app' deploy.log | grep -v -- '--' | head -n1 || true)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
