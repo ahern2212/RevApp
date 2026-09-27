@@ -17,7 +17,7 @@ export async function searchPlaces(query: string): Promise<Place[]> {
     headers:
       Platform.OS === 'web'
         ? { Accept: 'application/json' }
-        : { Accept: 'application/json', 'User-Agent': 'GarageApp/1.0 (Expo car-meet map)' },
+        : { Accept: 'application/json', 'User-Agent': 'RevApp/1.0 (Expo car-meet map)' },
   });
   if (!res.ok) throw new Error(`Place search failed (${res.status})`);
   const results = (await res.json()) as NominatimResult[];

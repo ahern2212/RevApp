@@ -16,7 +16,7 @@ export function postLink(post: Post): string {
 /** Opens the system share sheet (or the browser's share / copy fallback) for a post. */
 export async function sharePost(post: Post): Promise<void> {
   const title = post.car ? `${post.authorName}'s ${post.car}` : `${post.authorName}'s build`;
-  const text = [`${title} on Garage`, post.caption].filter(Boolean).join('\n');
+  const text = [`${title} on RevApp`, post.caption].filter(Boolean).join('\n');
   const url = postLink(post);
 
   if (Platform.OS === 'web') {

@@ -4,8 +4,10 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { GarageSection } from '@/components/GarageSection';
 import { PostGrid } from '@/components/PostGrid';
 import Colors from '@/constants/Colors';
+import { THEMES } from '@/constants/themes';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
 import { confirm } from '@/lib/confirm';
@@ -93,6 +95,25 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
+      <Pressable
+        onPress={() => router.push('/themes')}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.themesRow, pressed && styles.pressed]}>
+        <Ionicons name="color-palette-outline" size={20} color={Colors.light.tint} />
+        <View style={styles.themesText}>
+          <Text style={styles.themesTitle}>Vote on app colors</Text>
+          <Text style={styles.themesSubtitle}>Help pick RevApp’s next look</Text>
+        </View>
+        <View style={styles.themeDots}>
+          {THEMES.map((theme) => (
+            <View key={theme.id} style={[styles.themeDot, { backgroundColor: theme.colors.tint }]} />
+          ))}
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
+      </Pressable>
+
+      {userId ? <GarageSection ownerId={userId} editable /> : null}
+
       <View style={styles.tabs} accessibilityRole="tablist">
         {SECTIONS.map(({ key, label, icon }) => {
           const active = section === key;
@@ -154,6 +175,43 @@ const styles = StyleSheet.create({
   meta: {
     color: Colors.light.muted,
     marginTop: 4,
+  },
+  themesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: Colors.light.card,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    marginBottom: 20,
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  themesText: {
+    flex: 1,
+  },
+  themesTitle: {
+    color: Colors.light.text,
+    fontWeight: '800',
+  },
+  themesSubtitle: {
+    color: Colors.light.muted,
+    fontSize: 12,
+    marginTop: 1,
+  },
+  themeDots: {
+    flexDirection: 'row',
+  },
+  themeDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginLeft: -4,
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   bio: {
     color: Colors.light.text,

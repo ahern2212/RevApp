@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Garage",
+    "name": "RevApp",
     "slug": "garage",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.garage.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Garage needs photo access so you can post pictures of your car."
+        "NSPhotoLibraryUsageDescription": "RevApp needs photo access so you can post pictures of your car."
       }
     },
     "android": {
@@ -45,7 +45,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Garage needs photo access so you can post pictures of your car."
+          "photosPermission": "RevApp needs photo access so you can post pictures of your car."
         }
       ],
       "expo-audio",

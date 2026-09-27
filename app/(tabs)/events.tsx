@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TileMap } from '@/components/TileMap';
 import Colors from '@/constants/Colors';
@@ -21,6 +22,7 @@ export default function EventsScreen() {
   const router = useRouter();
   const { user } = useGarage();
   const tabBarSpace = useTabBarSpace();
+  const { top } = useSafeAreaInsets();
   const [events, setEvents] = useState<CarEvent[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,7 +60,7 @@ export default function EventsScreen() {
   return (
     <ScrollView
       style={styles.wrap}
-      contentContainerStyle={[styles.content, { paddingBottom: tabBarSpace }]}
+      contentContainerStyle={[styles.content, { paddingTop: top + 16, paddingBottom: tabBarSpace }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.tint} />
       }>

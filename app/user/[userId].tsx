@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { GarageSection } from '@/components/GarageSection';
 import { PostGrid } from '@/components/PostGrid';
 import { useProfile } from '@/context/ProfilesContext';
 import Colors from '@/constants/Colors';
@@ -44,6 +45,7 @@ export default function UserProfileScreen() {
         </View>
       </View>
       {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+      <GarageSection ownerId={userId} editable={false} />
       {list ? (
         <PostGrid posts={list} emptyText={`${username} hasn’t posted a car yet.`} />
       ) : failed ? (

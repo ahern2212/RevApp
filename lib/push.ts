@@ -3,7 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { palette } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 
 // Must match the channelId and sound the database sends in
@@ -43,7 +43,7 @@ export async function registerForPush(): Promise<void> {
       importance: Notifications.AndroidImportance.HIGH,
       sound: HORN_SOUND,
       vibrationPattern: [0, 200, 100, 200],
-      lightColor: palette.purplePain,
+      lightColor: Colors.light.tint,
     });
   }
 

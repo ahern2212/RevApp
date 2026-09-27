@@ -1,31 +1,15 @@
-import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { StyleSheet } from 'react-native';
 
+import { GarageTabBar } from '@/components/GarageTabBar';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import Colors from '@/constants/Colors';
 
 export default function TabLayout() {
   return (
     <Tabs
+      tabBar={(props) => <GarageTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
-        tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: 'transparent',
-          borderTopColor: Colors.light.border,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          elevation: 0,
-        },
-        tabBarBackground: () => (
-          <BlurView
-            intensity={80}
-            tint="light"
-            style={StyleSheet.absoluteFill}
-          />
-        ),
         headerStyle: { backgroundColor: Colors.light.background },
         headerTintColor: Colors.light.text,
         headerTitleStyle: { fontWeight: '800' },
@@ -50,6 +34,7 @@ export default function TabLayout() {
         name="events"
         options={{
           title: 'Events',
+          headerShown: false, // the screen has its own title row with "Host a meet"
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'calendar', android: 'event', web: 'event' }}
@@ -66,6 +51,33 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'plus.square', android: 'add_box', web: 'add_box' }}
+              tintColor={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="forums"
+        options={{
+          title: 'Forums',
+          headerShown: false, // the screen has its own title row with "New thread"
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'bubble.left.and.bubble.right', android: 'forum', web: 'forum' }}
+              tintColor={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="market"
+        options={{
+          title: 'Market',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'storefront', android: 'storefront', web: 'storefront' }}
               tintColor={color}
               size={26}
             />

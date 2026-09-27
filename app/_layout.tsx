@@ -90,11 +90,15 @@ function RootLayoutNav() {
           <Stack.Screen name="edit-profile" options={{ presentation: 'modal', title: 'Edit profile' }} />
           <Stack.Screen name="events/new" options={{ presentation: 'modal', title: 'Host a meet' }} />
           <Stack.Screen name="events/[eventId]" options={{ title: 'Meet' }} />
+          <Stack.Screen name="forums/new" options={{ presentation: 'modal', title: 'New thread' }} />
+          <Stack.Screen name="forums/[threadId]" options={{ title: 'Thread' }} />
+          <Stack.Screen name="garage/edit" options={{ presentation: 'modal', title: 'Garage' }} />
+          <Stack.Screen name="themes" options={{ title: 'App colors' }} />
           <Stack.Screen
             name="edit-post/[postId]"
             options={{ presentation: 'modal', title: 'Edit caption' }}
           />
-          <Stack.Screen name="user/[userId]" options={{ title: 'Garage' }} />
+          <Stack.Screen name="user/[userId]" options={{ title: 'Profile' }} />
         </Stack>
         <NotificationToaster />
         <PushNotifications />

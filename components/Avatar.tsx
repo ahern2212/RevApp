@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import Colors, { palette } from '@/constants/Colors';
+import Colors, { art } from '@/constants/Colors';
 import { useProfile } from '@/context/ProfilesContext';
 
-// Soft palette tints; the dark letter stays readable (WCAG AA) on every one of them.
-const BACKGROUNDS = [palette.mediumPurple, palette.iceCold, '#e6d3d8', '#dfe3f7'];
+// Soft tints from the active theme; the letter uses the theme's text color on top.
+const BACKGROUNDS = art.avatarTints;
 
 function colorFor(name: string): string {
   let hash = 0;

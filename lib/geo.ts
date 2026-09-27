@@ -12,7 +12,7 @@ export type Point = { x: number; y: number };
 // It's meant for light use — for a big launch, switch to a keyed provider (MapTiler, Stadia…).
 export const TILE_URL = (z: number, x: number, y: number): string =>
   `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
-export const TILE_HEADERS = { 'User-Agent': 'GarageApp/1.0 (Expo car-meet map)' };
+export const TILE_HEADERS = { 'User-Agent': 'RevApp/1.0 (Expo car-meet map)' };
 export const TILE_ATTRIBUTION = '© OpenStreetMap contributors';
 
 /** World pixel position of a coordinate at a zoom level. */

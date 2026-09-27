@@ -46,7 +46,7 @@ export function SetupScreen() {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.kicker}>GARAGE</Text>
+      <Text style={styles.kicker}>REVAPP</Text>
       <Text style={styles.title}>Instagram for cars.</Text>
       <Text style={styles.copy}>
         {isSignUp

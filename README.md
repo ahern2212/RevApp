@@ -1,4 +1,4 @@
-# Garage
+# RevApp
 
 Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app and an Android app, backed by Supabase (accounts, database, photo storage, realtime).
 
@@ -13,19 +13,24 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Saves** — bookmark any post; private "Saved" section on your profile
 - **Share** — system share sheet (or copy link on desktop browsers)
 - **Profiles** — tap any username to see that person's garage; edit your bio and profile picture
+- **My Garage** — add your cars (year/make/model, nickname, mods, photo) and get a custom 2D side-view render: pick the body style, paint, wheels and stance
 - **Search** — magnifier in the feed header finds drivers by username and builds by car or caption
 - **Activity** — heart button in the feed header lists likes and comments on your posts, with an unread badge
 - **Notifications** — car-horn pop-up while the app is open; push notifications with the horn sound when it's closed (development/store builds only)
+- **Forums** — threads in General, Builds, Tech Help, Meets and Off-Topic, with replies; active threads rise to the top
+- **Marketplace** — placeholder tab
+- **App colors vote** — five full palettes previewed live; users vote, and the winner is a one-line switch in `constants/Colors.ts`
 - **Events** — car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions
 
 ## Project layout
 
 | Path | What's there |
 | --- | --- |
-| `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Post, Profile; `comments/` (post page), `user/`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]` are stacked screens |
-| `components/` | UI pieces: `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
+| `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Post, Profile; `comments/` (post page), `user/`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes` are stacked screens |
+| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `CarRender`, `GarageSection`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache) |
-| `lib/` | Data + helpers: `supabase`, `posts`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime` |
+| `lib/` | Data + helpers: `supabase`, `posts`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
+| `constants/` | `themes.ts` (all palettes), `Colors.ts` (picks the active one) |
 | `tests/` | Unit tests for pure helpers (`npm test`, Node's built-in runner) |
 | `supabase/migrations/` | Database schema, run in order in the Supabase SQL Editor |
 | `scripts/deploy-web.mjs` | Publishes the website (see below) |

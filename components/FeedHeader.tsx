@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import Colors, { palette } from '@/constants/Colors';
+import Colors, { art } from '@/constants/Colors';
 import { useActivity } from '@/context/ActivityContext';
 
 const BANNER_HEIGHT = 128;
@@ -42,17 +42,17 @@ function SunsetScene({ width, height, top }: { width: number; height: number; to
     <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
       <Defs>
         <LinearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={palette.iceCold} />
-          <Stop offset="0.7" stopColor={palette.mediumPurple} />
-          <Stop offset="1" stopColor={palette.freezePurple} />
+          <Stop offset="0" stopColor={art.skyTop} />
+          <Stop offset="0.7" stopColor={art.skyMid} />
+          <Stop offset="1" stopColor={art.skyBottom} />
         </LinearGradient>
         <LinearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={palette.purplePain} />
-          <Stop offset="1" stopColor={palette.heavyPurple} />
+          <Stop offset="0" stopColor={art.sunFrom} />
+          <Stop offset="1" stopColor={art.sunTo} />
         </LinearGradient>
         <LinearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={palette.purplePain} />
-          <Stop offset="1" stopColor={Colors.light.text} />
+          <Stop offset="0" stopColor={art.groundTop} />
+          <Stop offset="1" stopColor={art.groundBottom} />
         </LinearGradient>
         <ClipPath id="sunBands">
           {sunBands(sunY, horizon).map((band) => (
@@ -69,10 +69,10 @@ function SunsetScene({ width, height, top }: { width: number; height: number; to
 
       <Rect x={0} y={0} width={width} height={horizon} fill="url(#sky)" />
       <Circle cx={sunX} cy={sunY} r={SUN_RADIUS} fill="url(#sun)" clipPath="url(#sunBands)" />
-      <Path d={mountainsPath(width, horizon)} fill={palette.purplePain} opacity={0.45} />
+      <Path d={mountainsPath(width, horizon)} fill={art.mountains} opacity={0.45} />
 
       <Rect x={0} y={horizon} width={width} height={height - horizon} fill="url(#ground)" />
-      <G stroke={palette.iceCold} strokeWidth={1} opacity={0.55}>
+      <G stroke={art.grid} strokeWidth={1} opacity={0.55}>
         {Array.from({ length: 15 }, (_, i) => i - 7).map((i) => (
           <Line
             key={`v${i}`}
@@ -87,7 +87,7 @@ function SunsetScene({ width, height, top }: { width: number; height: number; to
           return <Line key={`h${t}`} x1={0} y1={y} x2={width} y2={y} />;
         })}
       </G>
-      <Line x1={0} y1={horizon} x2={width} y2={horizon} stroke={palette.iceCold} strokeWidth={1.5} />
+      <Line x1={0} y1={horizon} x2={width} y2={horizon} stroke={art.grid} strokeWidth={1.5} />
 
       <G transform={`translate(${Math.max(16, width * 0.14)}, ${horizon + 8}) scale(1.15)`}>
         <G stroke="#ffffff" strokeWidth={1.5} strokeLinecap="round" opacity={0.75}>
@@ -99,13 +99,13 @@ function SunsetScene({ width, height, top }: { width: number; height: number; to
           d="M2,18 L6,12 Q10,10 20,9 L30,3 Q34,1 44,1 L54,2 Q58,3 64,9 L74,11 Q79,12 79,16 L79,19 L2,19 Z"
           fill={Colors.light.text}
         />
-        <Path d="M31,4 L44,2.5 L52,3.5 L57,8.5 L27,8.5 Z" fill={palette.iceCold} opacity={0.85} />
-        <Rect x={2} y={13} width={5} height={2.5} rx={1} fill={palette.iceCold} />
-        <Rect x={75} y={13} width={4} height={2.5} rx={1} fill={palette.mediumPurple} />
+        <Path d="M31,4 L44,2.5 L52,3.5 L57,8.5 L27,8.5 Z" fill={art.glass} opacity={0.85} />
+        <Rect x={2} y={13} width={5} height={2.5} rx={1} fill={art.glass} />
+        <Rect x={75} y={13} width={4} height={2.5} rx={1} fill={art.accentSoft} />
         {[18, 62].map((cx) => (
           <G key={cx}>
-            <Circle cx={cx} cy={19} r={5} fill={Colors.light.text} stroke={palette.mediumPurple} strokeWidth={1} />
-            <Circle cx={cx} cy={19} r={2} fill={palette.iceCold} />
+            <Circle cx={cx} cy={19} r={5} fill={Colors.light.text} stroke={art.accentSoft} strokeWidth={1} />
+            <Circle cx={cx} cy={19} r={2} fill={art.glass} />
           </G>
         ))}
       </G>
@@ -141,7 +141,7 @@ export function FeedHeader() {
       <View style={[styles.inner, { paddingTop: top + 10 }]}>
         <View style={styles.brandBlock}>
           <Text style={styles.brand} accessibilityRole="header">
-            GARAGE
+            REVAPP
           </Text>
           <Text style={styles.tagline} numberOfLines={1}>
             Fresh builds from the community
@@ -185,7 +185,7 @@ export function FeedHeader() {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: palette.mediumPurple,
+    backgroundColor: art.skyMid,
     overflow: 'hidden',
   },
   inner: {
