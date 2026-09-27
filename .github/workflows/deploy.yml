@@ -70,7 +70,9 @@ jobs:
 
       - name: Deploy to EAS Hosting
         id: deploy
+        # pipefail: without it the step's status is tee's, and a failed deploy shows green.
         run: |
+          set -o pipefail
           eas deploy --prod --non-interactive | tee deploy.log
           url=$(grep -oE 'https://[a-z0-9.-]+\.expo\.app' deploy.log | grep -v -- '--' | head -n1 || true)
           echo "url=$url" >> "$GITHUB_OUTPUT"
