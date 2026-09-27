@@ -36,8 +36,8 @@ export function PostGrid({ posts, emptyText }: Props) {
             contentFit="cover"
             transition={150}
           />
-          {post.videoUri ? (
-            <Ionicons name="play" size={18} color="#ffffff" style={styles.videoIcon} />
+          {post.videoUri || post.imageUris.length > 1 ? (
+            <Ionicons name={post.videoUri ? 'play' : 'copy'} size={16} color="#ffffff" style={styles.videoIcon} />
           ) : null}
         </Pressable>
       ))}

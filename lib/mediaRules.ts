@@ -17,6 +17,8 @@ export const IMAGE_UPLOAD_MAX_BYTES = 10 * MB;
 /** Largest video we upload; matches the post-videos bucket limit. */
 export const VIDEO_MAX_BYTES = 50 * MB;
 export const VIDEO_MAX_SECONDS = 60;
+/** Photos in one carousel post (matches posts.extra_image_paths: cover + 9). */
+export const CAROUSEL_MAX = 10;
 export const VIDEO_MIN_SECONDS = 1;
 /** Photos are resized so their longest side is at most this. */
 export const IMAGE_MAX_SIDE = 2048;

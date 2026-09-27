@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { MediaCarousel } from '@/components/MediaCarousel';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostVideo } from '@/components/PostVideo';
 import { RichText } from '@/components/RichText';
@@ -111,6 +112,7 @@ export default function CommentsScreen() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const [menu, setMenu] = useState<SheetOption[] | null>(null);
 
   const dropComments = (match: (comment: Comment) => boolean) => {
@@ -242,12 +244,16 @@ export default function CommentsScreen() {
                   onPress={() => setViewerOpen(true)}
                   accessibilityRole="imagebutton"
                   accessibilityLabel={post.car ? `Photo of ${post.car}. View full screen` : 'View photo full screen'}>
-                  <Image
-                    source={{ uri: post.imageUri }}
-                    style={styles.photo}
-                    contentFit="cover"
-                    transition={150}
-                  />
+                  {post.imageUris.length > 1 ? (
+                    <MediaCarousel uris={post.imageUris} style={styles.photo} onIndexChange={setPhotoIndex} />
+                  ) : (
+                    <Image
+                      source={{ uri: post.imageUri }}
+                      style={styles.photo}
+                      contentFit="cover"
+                      transition={150}
+                    />
+                  )}
                 </Pressable>
               )}
               {post.car || post.authorId !== user?.id ? (
@@ -341,7 +347,11 @@ export default function CommentsScreen() {
             onPress={() => setViewerOpen(false)}
             accessibilityRole="button"
             accessibilityLabel="Close photo">
-            <Image source={{ uri: post.imageUri }} style={styles.viewerImage} contentFit="contain" />
+            <Image
+              source={{ uri: post.imageUris[photoIndex] ?? post.imageUri }}
+              style={styles.viewerImage}
+              contentFit="contain"
+            />
             <View style={styles.viewerClose}>
               <Ionicons name="close" size={26} color="#ffffff" />
             </View>

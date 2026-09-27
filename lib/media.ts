@@ -5,6 +5,7 @@ import {
   checkDimensions,
   checkDuration,
   checkPicked,
+  CAROUSEL_MAX,
   checkUpload,
   type CheckedUpload,
   fitWithin,
@@ -89,8 +90,10 @@ async function prepareVideo(asset: ImagePicker.ImagePickerAsset): Promise<Picked
   };
 }
 
+const isVideo = (asset: ImagePicker.ImagePickerAsset) => asset.type === 'video' || asset.type === 'pairedVideo';
+
 async function prepare(asset: ImagePicker.ImagePickerAsset, options: PhotoOptions = {}): Promise<PickedMedia> {
-  const kind: MediaKind = asset.type === 'video' || asset.type === 'pairedVideo' ? 'video' : 'image';
+  const kind: MediaKind = isVideo(asset) ? 'video' : 'image';
   const problem = checkPicked({
     kind,
     mimeType: asset.mimeType,
@@ -116,16 +119,29 @@ export async function pickPhoto(options: PhotoOptions = {}): Promise<PickedMedia
   return prepare(result.assets[0], options);
 }
 
-/** Opens the library for a photo or a video (up to VIDEO_MAX_SECONDS), like Instagram's post picker. */
-export async function pickPostMedia(): Promise<PickedMedia | null> {
+/**
+ * Opens the library for a post, like Instagram's picker: one video (up to VIDEO_MAX_SECONDS)
+ * or up to CAROUSEL_MAX photos. Resolves null if cancelled.
+ */
+export async function pickPostMedia(): Promise<PickedMedia[] | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images', 'videos'],
     quality: 1,
     preferredAssetRepresentationMode: COMPATIBLE,
     videoMaxDuration: VIDEO_MAX_SECONDS,
+    allowsMultipleSelection: true,
+    selectionLimit: CAROUSEL_MAX,
+    orderedSelection: true,
   });
-  if (result.canceled || !result.assets[0]) return null;
-  return prepare(result.assets[0]);
+  if (result.canceled || result.assets.length === 0) return null;
+  const assets = result.assets.slice(0, CAROUSEL_MAX);
+  if (assets.length > 1 && assets.some(isVideo)) {
+    throw new Error(`Post a video on its own, or pick up to ${CAROUSEL_MAX} photos for a carousel.`);
+  }
+  // One at a time: decoding several full-size photos at once can run a phone out of memory.
+  const picked: PickedMedia[] = [];
+  for (const asset of assets) picked.push(await prepare(asset));
+  return picked;
 }
 
 /** Reads a local file and runs the final byte-level check before it's uploaded. */

@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
+import { MediaCarousel } from '@/components/MediaCarousel';
 import { PostVideo } from '@/components/PostVideo';
 import { RichText } from '@/components/RichText';
 import Colors from '@/constants/Colors';
@@ -159,6 +160,8 @@ export function PostCard({
         accessibilityHint={post.videoUri ? 'Tap for sound. Double-tap to like' : 'Double-tap to like'}>
         {post.videoUri ? (
           <PostVideo uri={post.videoUri} posterUri={post.imageUri} active={active} style={styles.photo} />
+        ) : post.imageUris.length > 1 ? (
+          <MediaCarousel uris={post.imageUris} style={styles.photo} />
         ) : (
           <Image
             source={{ uri: post.imageUri }}

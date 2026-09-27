@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { CarDetailsInput } from '@/components/CarDetailsInput';
 import { Chip } from '@/components/Chip';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
+import { MediaCarousel } from '@/components/MediaCarousel';
 import { PostVideo } from '@/components/PostVideo';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
@@ -15,7 +16,7 @@ import { type Car, carTitle, fetchCars } from '@/lib/cars';
 import { showError } from '@/lib/confirm';
 import { useTabBarSpace } from '@/lib/layout';
 import { type PickedMedia, pickPostMedia } from '@/lib/media';
-import { formatDuration, VIDEO_MAX_SECONDS } from '@/lib/mediaRules';
+import { CAROUSEL_MAX, formatDuration, VIDEO_MAX_SECONDS } from '@/lib/mediaRules';
 import { type CarDetails, formatCar } from '@/lib/vehicles';
 
 const EMPTY_CAR: CarDetails = { year: '', make: '', model: '' };
@@ -27,7 +28,9 @@ export default function PostScreen() {
   const [myCars, setMyCars] = useState<Car[]>([]);
   const [carId, setCarId] = useState<string | null>(null);
   const router = useRouter();
-  const [media, setMedia] = useState<PickedMedia | null>(null);
+  // One video, or 1–10 photos.
+  const [media, setMedia] = useState<PickedMedia[] | null>(null);
+  const first = media?.[0];
   const [preparing, setPreparing] = useState(false);
   const [car, setCar] = useState<CarDetails>(EMPTY_CAR);
   const [caption, setCaption] = useState('');
@@ -57,7 +60,7 @@ export default function PostScreen() {
     setCarId(tagged.id);
     setCar({ year: tagged.year, make: tagged.make, model: tagged.model });
   };
-  const isVideo = media?.kind === 'video';
+  const isVideo = first?.kind === 'video';
 
   const pick = async () => {
     setPreparing(true);
@@ -101,23 +104,25 @@ export default function PostScreen() {
           disabled={preparing || busy}
           style={styles.picker}
           accessibilityRole="button"
-          accessibilityLabel={media ? 'Change photo or video' : 'Choose a car photo or video'}>
+          accessibilityLabel={media ? 'Change photos or video' : 'Choose car photos or a video'}>
           {preparing ? (
             <View style={styles.pickerEmpty}>
               <ActivityIndicator color={Colors.light.tint} />
               <Text style={styles.pickerText}>Checking your file…</Text>
             </View>
-          ) : media ? (
+          ) : media && first ? (
             <>
-              {media.kind === 'video' && media.posterUri ? (
-                <PostVideo uri={media.uri} posterUri={media.posterUri} active style={styles.preview} />
+              {first.kind === 'video' && first.posterUri ? (
+                <PostVideo uri={first.uri} posterUri={first.posterUri} active style={styles.preview} />
+              ) : media.length > 1 ? (
+                <MediaCarousel uris={media.map((item) => item.uri)} style={styles.preview} />
               ) : (
-                <Image source={{ uri: media.uri }} style={styles.preview} contentFit="cover" />
+                <Image source={{ uri: first.uri }} style={styles.preview} contentFit="cover" />
               )}
-              {media.kind === 'video' && media.durationMs ? (
+              {first.kind === 'video' && first.durationMs ? (
                 <View style={[styles.badge, styles.durationBadge]}>
                   <Ionicons name="videocam" size={14} color={Colors.light.onTint} />
-                  <Text style={styles.badgeText}>{formatDuration(media.durationMs)}</Text>
+                  <Text style={styles.badgeText}>{formatDuration(first.durationMs)}</Text>
                 </View>
               ) : null}
               <View style={[styles.badge, styles.changeBadge]}>
@@ -131,10 +136,10 @@ export default function PostScreen() {
                 <Ionicons name="camera-outline" size={40} color={Colors.light.tint} />
                 <Ionicons name="videocam-outline" size={40} color={Colors.light.tint} />
               </View>
-              <Text style={styles.pickerText}>Tap to choose a car photo or video</Text>
+              <Text style={styles.pickerText}>Tap to choose car photos or a video</Text>
               <Text style={styles.rules}>
-                Cars, parts, meets and builds only. JPEG, PNG, WebP or HEIC photos · MP4 or MOV videos up
-                to {VIDEO_MAX_SECONDS} seconds.
+                Cars, parts, meets and builds only. Up to {CAROUSEL_MAX} JPEG, PNG, WebP or HEIC photos,
+                or one MP4 or MOV video up to {VIDEO_MAX_SECONDS} seconds.
               </Text>
             </View>
           )}

@@ -16,6 +16,7 @@ export type PostRow = {
   author_id: string;
   image_path: string;
   video_path?: string | null;
+  extra_image_paths?: string[] | null;
   car_id?: string | null;
   car: string;
   caption: string;
@@ -26,12 +27,16 @@ export type PostRow = {
 };
 
 export function toPost(row: PostRow): Post {
+  const imageUrl = (path: string) => supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  const extraImagePaths = row.extra_image_paths ?? [];
   return {
     id: row.id,
     authorId: row.author_id,
     authorName: row.author?.username ?? 'driver',
     imagePath: row.image_path,
-    imageUri: supabase.storage.from(BUCKET).getPublicUrl(row.image_path).data.publicUrl,
+    imageUri: imageUrl(row.image_path),
+    extraImagePaths,
+    imageUris: [row.image_path, ...extraImagePaths].map(imageUrl),
     videoPath: row.video_path ?? null,
     videoUri: row.video_path
       ? supabase.storage.from(VIDEO_BUCKET).getPublicUrl(row.video_path).data.publicUrl
