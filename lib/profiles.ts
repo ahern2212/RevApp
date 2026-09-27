@@ -42,6 +42,17 @@ export async function fetchProfiles(ids: string[]): Promise<Profile[]> {
   return (basic.data as ProfileRow[]).map(toProfile);
 }
 
+/** The id of the driver with this exact username, or null if nobody has it. */
+export async function fetchProfileIdByUsername(username: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username.toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { id: string } | null)?.id ?? null;
+}
+
 type ProfileUpdate = {
   bio: string;
   /** New picture picked on the device, if any. */

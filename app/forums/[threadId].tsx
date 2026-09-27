@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { RichText } from '@/components/RichText';
 import { useReportSheet } from '@/components/SafetyActions';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
@@ -153,7 +154,11 @@ export default function ThreadScreen() {
               <Text style={styles.author}>{thread.authorName}</Text>
               <Text style={styles.time}>· {timeAgo(thread.createdAt)}</Text>
             </Pressable>
-            {thread.body ? <Text style={styles.body}>{thread.body}</Text> : null}
+            {thread.body ? (
+              <Text style={styles.body}>
+                <RichText text={thread.body} />
+              </Text>
+            ) : null}
             <View style={styles.opFooter}>
               <Text style={styles.replyCount}>
                 {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
@@ -188,7 +193,9 @@ export default function ThreadScreen() {
               <Text style={styles.replyAuthor}>
                 {item.authorName} <Text style={styles.time}>· {timeAgo(item.createdAt)}</Text>
               </Text>
-              <Text style={styles.replyText}>{item.body}</Text>
+              <Text style={styles.replyText}>
+                <RichText text={item.body} />
+              </Text>
             </View>
             {item.authorId === user?.id ? (
               <Pressable

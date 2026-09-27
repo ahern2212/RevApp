@@ -9,9 +9,10 @@ export type Driver = { id: string; username: string };
 export type SearchResults = { drivers: Driver[]; posts: Post[] };
 
 // Keep only characters that are safe inside a PostgREST filter string
-// (commas, parentheses and wildcards would change the query's meaning).
+// (commas, parentheses and wildcards would change the query's meaning). "#" is kept so
+// tapping a hashtag searches for that exact tag.
 export function cleanSearchQuery(query: string): string {
-  return query.replace(/[^\p{L}\p{N}\s._-]/gu, ' ').replace(/\s+/g, ' ').trim();
+  return query.replace(/[^\p{L}\p{N}\s#._-]/gu, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /** Drivers whose username matches, and posts whose car or caption matches. */

@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostVideo } from '@/components/PostVideo';
+import { RichText } from '@/components/RichText';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
@@ -66,7 +67,7 @@ function CommentRow({
           <Text style={styles.username} onPress={onNamePress}>
             {name}{' '}
           </Text>
-          {body}
+          <RichText text={body} />
         </Text>
         <Text style={styles.meta}>{timeAgo(createdAt)}</Text>
       </View>

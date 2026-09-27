@@ -12,6 +12,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **Post page** — photo (tap for full screen), car, caption and comments; opened from the feed, grids, Activity and shared links
 - **Likes** — tap the heart or double-tap the photo; tap the count to see who liked it
 - **Comments** — the car button opens comments; delete your own
+- **Hashtags & mentions** — #tags and @usernames in captions, comments and forum posts are tappable: a tag opens search for it, a mention opens that driver's profile
 - **Saves** — bookmark any post; private "Saved" section on your profile
 - **Share** — system share sheet (or copy link on desktop browsers)
 - **Profiles** — tap any username to see that person's garage; edit your username, bio and profile picture
@@ -33,9 +34,9 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 | Path | What's there |
 | --- | --- |
 | `app/` | Screens (Expo Router). `(tabs)/` = Feed, Events, Forums, Post, Market, About, Profile; `comments/` (post page), `user/`, `follows/` (followers/following), `blocked`, `activity`, `search`, `edit-post/`, `edit-profile`, `likes/`, `events/new`, `events/[id]`, `forums/new`, `forums/[id]`, `garage/edit`, `themes`, `market/new`, `market/[id]` are stacked screens |
-| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `GarageSection`, `PostVideo`, `SafetyActions` (report sheet + block confirm), `FollowStats`, `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
+| `components/` | UI pieces: `GarageTabBar` (raised center Post button), `GarageSection`, `PostVideo`, `SafetyActions` (report sheet + block confirm), `FollowStats`, `RichText` (tappable #tags and @mentions), `ThemePreview`, `PostCard`, `PostGrid`, `FeedHeader` (SVG banner), `TileMap`, `Avatar`, `OptionsSheet`, `CarDetailsInput`, `NotificationToaster`, … |
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache) |
-| `lib/` | Data + helpers: `supabase`, `posts`, `media` (validated photo/video picker + upload check), `mediaRules` (upload limits, byte sniffing), `videoPoster`, `videoSound`, `safety` (reports, blocks), `follows`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
+| `lib/` | Data + helpers: `supabase`, `posts`, `media` (validated photo/video picker + upload check), `mediaRules` (upload limits, byte sniffing), `videoPoster`, `videoSound`, `safety` (reports, blocks), `follows`, `richText` (tag/mention tokenizer), `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
 | `constants/` | `themes.ts` (all palettes), `Colors.ts` (picks the active one), `glass.ts` (shared glass card style) |
 | `tests/` | Unit tests for pure helpers (`npm test`, Node's built-in runner) |
 | `supabase/migrations/` | Database schema, run in order in the Supabase SQL Editor |

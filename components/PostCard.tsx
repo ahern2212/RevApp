@@ -13,6 +13,7 @@ import Animated, {
 
 import { Avatar } from '@/components/Avatar';
 import { PostVideo } from '@/components/PostVideo';
+import { RichText } from '@/components/RichText';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { timeAgo } from '@/lib/time';
@@ -226,7 +227,7 @@ export function PostCard({
           <Text style={styles.username} onPress={onAuthorPress}>
             {post.authorName}{' '}
           </Text>
-          {post.caption}
+          <RichText text={post.caption} />
         </Text>
       ) : null}
       {longCaption && !captionOpen ? (

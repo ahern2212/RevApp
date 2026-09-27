@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,7 +22,9 @@ const DEBOUNCE_MS = 300;
 
 export default function SearchScreen() {
   const router = useRouter();
-  const [query, setQuery] = useState('');
+  // Opened from a tapped #hashtag: start with that search.
+  const { q: initialQuery } = useLocalSearchParams<{ q?: string }>();
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [results, setResults] = useState<(SearchResults & { query: string }) | null>(null);
   const q = query.trim();
   const current = results && results.query === q ? results : null;

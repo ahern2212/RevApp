@@ -104,7 +104,8 @@ export default function PostScreen() {
               </View>
               <Text style={styles.pickerText}>Tap to choose a car photo or video</Text>
               <Text style={styles.rules}>
-                JPEG, PNG, WebP or HEIC photos · MP4 or MOV videos up to {VIDEO_MAX_SECONDS} seconds
+                Cars, parts, meets and builds only. JPEG, PNG, WebP or HEIC photos · MP4 or MOV videos up
+                to {VIDEO_MAX_SECONDS} seconds.
               </Text>
             </View>
           )}

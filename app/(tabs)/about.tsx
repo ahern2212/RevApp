@@ -12,7 +12,8 @@ import { useTabBarSpace } from '@/lib/layout';
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const FEATURES: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'images-outline', title: 'Share builds', text: 'Post your car, like and comment with the car button.' },
+  { icon: 'images-outline', title: 'Share builds', text: 'Post photos and videos of your car; like and comment with the car button.' },
+  { icon: 'people-outline', title: 'Follow drivers', text: 'Follow people and switch the feed to just their builds.' },
   { icon: 'car-sport-outline', title: 'Your garage', text: 'Show off your cars with photos and your list of mods.' },
   { icon: 'map-outline', title: 'Meets', text: 'Find car meets on the map and see who’s rolling in.' },
   { icon: 'chatbubbles-outline', title: 'Forums', text: 'Ask for help, share builds, talk shop.' },
@@ -21,10 +22,12 @@ const FEATURES: { icon: IconName; title: string; text: string }[] = [
 ];
 
 const GUIDELINES: { icon: IconName; text: string }[] = [
+  { icon: 'car-sport-outline', text: 'Keep it about cars: your builds, parts, meets and car culture.' },
   { icon: 'heart-outline', text: 'Respect every build — stock or stanced, budget or big money.' },
   { icon: 'speedometer-outline', text: 'Drive safe. No street racing or reckless driving content.' },
   { icon: 'pricetag-outline', text: 'List honestly: real photos, real condition, real prices.' },
   { icon: 'lock-closed-outline', text: 'Protect privacy — no plates or personal info without consent.' },
+  { icon: 'flag-outline', text: 'See something that breaks these rules? Tap “…” and report it, or block the account.' },
 ];
 
 export default function AboutScreen() {
