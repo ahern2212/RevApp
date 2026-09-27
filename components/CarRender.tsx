@@ -8,16 +8,31 @@ import Svg, {
   Line,
   LinearGradient,
   Path,
+  RadialGradient,
   Rect,
   Stop,
 } from 'react-native-svg';
 
-import { type BodyStyle, carParts, type Part, SHAPES, type Stance, stanceOffset } from '@/lib/carShapes';
+import { BODY_LAYERS, carParts, LAYERS, type Part } from '@/lib/carDrawing';
+import { type BodyStyle, SHAPES, type Stance, stanceOffset } from '@/lib/carShapes';
 
 const TAGS = { path: Path, circle: Circle, rect: Rect, line: Line, ellipse: Ellipse };
+const GRADIENTS = { linearGradient: LinearGradient, radialGradient: RadialGradient };
+
+type AnyProps = Record<string, string | number>;
 
 function render(part: Part) {
-  const Tag = TAGS[part.tag] as unknown as ComponentType<Record<string, string | number>>;
+  if (part.layer === 'defs') {
+    const Gradient = GRADIENTS[part.tag] as unknown as ComponentType<Record<string, unknown>>;
+    return (
+      <Gradient key={part.key} {...part.attrs}>
+        {part.stops.map((s, i) => (
+          <Stop key={i} offset={s.offset} stopColor={s.color} stopOpacity={s.opacity ?? 1} />
+        ))}
+      </Gradient>
+    );
+  }
+  const Tag = TAGS[part.tag] as unknown as ComponentType<AnyProps>;
   return <Tag key={part.key} {...part.attrs} />;
 }
 
@@ -34,26 +49,27 @@ type Props = {
 export function CarRender({ bodyStyle, paint, wheels, stance, width = '100%' }: Props) {
   const style = SHAPES[bodyStyle] ? bodyStyle : 'coupe';
   const parts = carParts(style, paint, wheels);
-  const clipId = `carGlass-${style}`; // identical content per id, so duplicates are harmless
+  const clipId = `carGlassClip-${style}`; // identical content per id, so duplicates are harmless
+  const lift = stanceOffset(stance);
+  const layer = (name: Part['layer']) => parts.filter((p) => p.layer === name).map(render);
 
   return (
     <Svg width={width} style={{ aspectRatio: 320 / 130 }} viewBox="0 0 320 130">
       <Defs>
-        <LinearGradient id="carShade" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#ffffff" stopOpacity={0.35} />
-          <Stop offset="0.45" stopColor="#ffffff" stopOpacity={0} />
-          <Stop offset="1" stopColor="#000000" stopOpacity={0.22} />
-        </LinearGradient>
+        {layer('defs')}
         <ClipPath id={clipId}>
           <Path d={SHAPES[style].glass} />
         </ClipPath>
       </Defs>
-      {parts.filter((p) => p.layer === 'shadow').map(render)}
-      <G transform={`translate(0, ${stanceOffset(stance)})`}>
-        {parts.filter((p) => p.layer === 'body' && !p.clip).map(render)}
-        <G clipPath={`url(#${clipId})`}>{parts.filter((p) => p.clip).map(render)}</G>
-      </G>
-      {parts.filter((p) => p.layer === 'wheels').map(render)}
+      {LAYERS.map((name) =>
+        BODY_LAYERS.includes(name) ? (
+          <G key={name} transform={`translate(0, ${lift})`}>
+            {name === 'glass' ? <G clipPath={`url(#${clipId})`}>{layer(name)}</G> : layer(name)}
+          </G>
+        ) : (
+          <G key={name}>{layer(name)}</G>
+        )
+      )}
     </Svg>
   );
 }

@@ -12,7 +12,7 @@ import {
   type Stance,
   stanceOffset,
   wheelCenterY,
-} from './carShapes';
+} from './carShapes.ts';
 
 export type GradientStop = { offset: number; color: string; opacity?: number };
 

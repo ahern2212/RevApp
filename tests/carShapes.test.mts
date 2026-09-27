@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { BODY_STYLES, bodyPath, carParts, guessBodyStyle, SHAPES } from '../lib/carShapes.ts';
+import { carParts } from '../lib/carDrawing.ts';
+import { BODY_STYLES, bodyPath, guessBodyStyle, SHAPES } from '../lib/carShapes.ts';
 
 test('guessBodyStyle matches well-known models', () => {
   const cases: [string, string, string][] = [
