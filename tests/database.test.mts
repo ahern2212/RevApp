@@ -469,3 +469,24 @@ test('avatars: images only, in your own folder', async () => {
   assert.ok(await upload(`${alice}/avatar-1.svg`));
   assert.ok(await upload(`${bob}/avatar-1.jpg`));
 });
+
+test('sharing a post in a message: preview text, and only posts you can see', async () => {
+  const { alice, bob, carol, dave } = users;
+  const [{ start_conversation: chat }] = await as(alice, () => q(`select start_conversation($1)`, [dave]));
+  const shared = await post(bob, { caption: 'look at this' });
+  await as(alice, () => q(`insert into messages (conversation_id, body, post_id) values ($1, '', $2)`, [chat, shared]));
+  const [conv] = await as(dave, () => q(`select last_message from conversations where id = $1`, [chat]));
+  assert.equal(conv.last_message, 'Sent a post');
+  assert.ok(
+    await fails(() => as(alice, () => q(`insert into messages (conversation_id, body) values ($1, '  ')`, [chat]))),
+    'empty text without a post'
+  );
+
+  // Carol and Bob blocked each other, so Carol can't share Bob's post.
+  const [{ start_conversation: carolChat }] = await as(carol, () => q(`select start_conversation($1)`, [dave]));
+  assert.ok(
+    await fails(() =>
+      as(carol, () => q(`insert into messages (conversation_id, body, post_id) values ($1, '', $2)`, [carolChat, shared]))
+    )
+  );
+});

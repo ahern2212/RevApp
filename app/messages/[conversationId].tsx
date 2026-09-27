@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
+import { SharedPost } from '@/components/SharedPost';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
@@ -242,10 +243,17 @@ export default function ChatScreen() {
                   onLongPress={() => openMenu(item)}
                   delayLongPress={300}
                   accessibilityHint={mine ? 'Long-press to unsend' : 'Long-press to report or block'}
-                  style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-                  <Text style={[styles.body, mine && styles.mineText]} selectable>
-                    {item.body}
-                  </Text>
+                  style={[styles.message, mine ? styles.alignMine : styles.alignTheirs]}>
+                  {item.postId ? <SharedPost postId={item.postId} /> : null}
+                  {item.body.trim() ? (
+                    <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
+                      <Text style={[styles.body, mine && styles.mineText]} selectable>
+                        {item.body}
+                      </Text>
+                    </View>
+                  ) : !item.postId ? (
+                    <Text style={styles.gone}>Shared post was deleted</Text>
+                  ) : null}
                 </Pressable>
               </View>
             );
@@ -310,22 +318,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 8,
   },
-  bubble: {
+  message: {
     maxWidth: '78%',
+    gap: 4,
+  },
+  alignMine: {
+    alignSelf: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  alignTheirs: {
+    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  bubble: {
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   mine: {
-    alignSelf: 'flex-end',
     backgroundColor: Colors.light.tint,
     borderBottomRightRadius: 6,
   },
   theirs: {
     ...glass,
     shadowOpacity: 0,
-    alignSelf: 'flex-start',
     borderBottomLeftRadius: 6,
+  },
+  gone: {
+    color: Colors.light.muted,
+    fontStyle: 'italic',
   },
   body: {
     color: Colors.light.text,

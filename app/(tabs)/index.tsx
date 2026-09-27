@@ -110,8 +110,21 @@ export default function FeedScreen() {
       params: { userId: post.authorId, name: post.authorName },
     });
 
-  const share = (post: Post) =>
-    sharePost(post).catch((error) => showError('Could not share', error));
+  // Share: send it to someone in a message, or share the link outside the app.
+  const [shareFor, setShareFor] = useState<Post | null>(null);
+  const share = (post: Post) => setShareFor(post);
+  const shareOptions = (post: Post): SheetOption[] => [
+    {
+      label: 'Send in a message',
+      icon: 'paper-plane-outline',
+      onPress: () => router.push({ pathname: '/send-post/[postId]', params: { postId: post.id } }),
+    },
+    {
+      label: 'Share link',
+      icon: 'share-outline',
+      onPress: () => sharePost(post).catch((error) => showError('Could not share', error)),
+    },
+  ];
 
   const remove = async (post: Post) => {
     const ok = await confirm(
@@ -360,6 +373,12 @@ export default function FeedScreen() {
         visible={optionsFor !== null}
         onClose={() => setOptionsFor(null)}
         options={optionsFor ? menuFor(optionsFor) : []}
+      />
+      <OptionsSheet
+        visible={shareFor !== null}
+        onClose={() => setShareFor(null)}
+        title="Share"
+        options={shareFor ? shareOptions(shareFor) : []}
       />
       {reportSheet}
     </View>

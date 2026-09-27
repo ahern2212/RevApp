@@ -105,16 +105,25 @@ export async function markConversationRead(id: string): Promise<void> {
 
 // ─── Messages ──────────────────────────────────────────────────────────────
 
-export type Message = { id: string; senderId: string; body: string; createdAt: number };
+export type Message = {
+  id: string;
+  senderId: string;
+  body: string;
+  /** A post shared in the chat (null for plain text, or once the post is deleted). */
+  postId: string | null;
+  createdAt: number;
+};
 
-type MessageRow = { id: string; sender_id: string; body: string; created_at: string };
+type MessageRow = { id: string; sender_id: string; body: string; post_id?: string | null; created_at: string };
 
-const MESSAGE_SELECT = 'id, sender_id, body, created_at';
+// "*" picks up post_id once the share-posts migration has run.
+const MESSAGE_SELECT = '*';
 
 const toMessage = (row: MessageRow): Message => ({
   id: row.id,
   senderId: row.sender_id,
   body: row.body,
+  postId: row.post_id ?? null,
   createdAt: Date.parse(row.created_at),
 });
 
@@ -139,12 +148,13 @@ export async function fetchMessages(conversationId: string, cursor?: string | nu
   };
 }
 
-export async function sendMessage(conversationId: string, body: string): Promise<Message> {
-  const { data, error } = await supabase
-    .from('messages')
-    .insert({ conversation_id: conversationId, body: body.trim() })
-    .select(MESSAGE_SELECT)
-    .single();
+/** Sends text, or shares a post (with optional text) when `postId` is given. */
+export async function sendMessage(conversationId: string, body: string, postId?: string): Promise<Message> {
+  const row = { conversation_id: conversationId, body: body.trim(), ...(postId ? { post_id: postId } : {}) };
+  const { data, error } = await supabase.from('messages').insert(row).select(MESSAGE_SELECT).single();
+  if (error?.code === 'PGRST204' && postId) {
+    throw new Error('Sending posts in messages needs the latest database update.');
+  }
   if (error) {
     // The insert rule fails when either person has blocked the other.
     if (error.code === '42501') throw new Error('You can’t message this driver.');

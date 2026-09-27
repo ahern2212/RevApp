@@ -110,6 +110,7 @@ function RootLayoutNav() {
           <Stack.Screen name="blocked" options={{ title: 'Blocked accounts' }} />
           <Stack.Screen name="inbox" options={{ title: 'Messages' }} />
           <Stack.Screen name="messages/[conversationId]" options={{ title: 'Chat' }} />
+          <Stack.Screen name="send-post/[postId]" options={{ presentation: 'modal', title: 'Send to' }} />
         </Stack>
         <NotificationToaster />
         <PushNotifications />
