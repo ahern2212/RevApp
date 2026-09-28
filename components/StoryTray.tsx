@@ -119,7 +119,7 @@ export function StoryTray({ refreshSignal }: { refreshSignal: number }) {
       <Bubble
         name="Your story"
         userId={user.id}
-        unseen={false}
+        unseen={!!mine}
         label={mine ? 'View your story' : 'Add to your story'}
         onPress={mine ? () => openStories(mine) : addStory}
         badge={addBadge}
