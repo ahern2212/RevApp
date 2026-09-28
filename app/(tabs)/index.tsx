@@ -28,6 +28,7 @@ import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostCard } from '@/components/PostCard';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
+import { StoryTray } from '@/components/StoryTray';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
@@ -70,6 +71,8 @@ export default function FeedScreen() {
   const [optionsFor, setOptionsFor] = useState<Post | null>(null);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [topPost, setTopPost] = useState<Post | null>(null);
+  // Bumped on pull-to-refresh so the stories tray reloads with the feed.
+  const [storySignal, setStorySignal] = useState(0);
 
   const loadTopPost = useCallback(() => {
     fetchCarOfTheWeek()
@@ -81,6 +84,7 @@ export default function FeedScreen() {
   const onRefresh = () => {
     refresh();
     loadTopPost();
+    setStorySignal((signal) => signal + 1);
   };
 
   const { openReport, reportSheet } = useReportSheet((target) => {
@@ -278,6 +282,7 @@ export default function FeedScreen() {
         onEndReachedThreshold={0.6}
         ListHeaderComponent={
           <>
+            <StoryTray refreshSignal={storySignal} />
             <View style={styles.modes} accessibilityRole="tablist">
               <Chip label="Everyone" icon="globe-outline" active={feedMode === 'all'} onPress={() => setFeedMode('all')} />
               <Chip

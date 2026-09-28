@@ -534,3 +534,60 @@ test('notification settings turn off pushes but keep Activity and the inbox curr
   assert.equal((await as(alice, () => q(`select * from notification_settings`))).length, 0, 'settings are private');
   assert.ok(await fails(() => as(alice, () => q(`select wants_push($1, 'like')`, [dave]))), 'not callable by users');
 });
+
+test('stories: 24 hours, tray for people you follow, views for the author', async () => {
+  const { alice, bob, carol, dave } = users;
+  const story = async (userId: string, extra = '') => {
+    const [row] = await as(userId, () =>
+      q(`insert into stories (image_path${extra ? ', video_path' : ''}) values ($1${extra ? ', $2' : ''}) returning id`, [
+        photo(userId),
+        ...(extra ? [extra] : []),
+      ])
+    );
+    return row.id as string;
+  };
+  const aliceStory = await story(alice);
+  await story(alice, `${alice}/story-1.mp4`);
+  assert.ok(await fails(() => as(alice, () => q(`insert into stories (image_path) values ($1)`, [photo(bob)]))));
+  assert.ok(
+    await fails(() =>
+      as(alice, () =>
+        q(`insert into stories (image_path, expires_at) values ($1, now() + interval '7 days')`, [photo(alice)])
+      )
+    ),
+    'can\'t make a story last longer'
+  );
+
+  // Dave follows Alice (from an earlier test), so her stories are in his tray, unseen.
+  const tray = await as(dave, () => q(`select author_id, unseen from story_tray()`));
+  const aliceRow = tray.find((row) => row.author_id === alice);
+  assert.equal(Number(aliceRow?.unseen), 2);
+
+  await as(dave, () => q(`insert into story_views (story_id) values ($1)`, [aliceStory]));
+  const [after] = await as(dave, () => q(`select unseen from story_tray() where author_id = $1`, [alice]));
+  assert.equal(Number(after.unseen), 1);
+  assert.equal((await as(alice, () => q(`select viewer_id from story_views where story_id = $1`, [aliceStory]))).length, 1);
+  assert.equal((await as(bob, () => q(`select * from story_views where story_id = $1`, [aliceStory]))).length, 0);
+
+  // Expired stories disappear for others but stay visible to their author (for cleanup).
+  await q(`update stories set expires_at = now() - interval '1 minute' where id = $1`, [aliceStory]);
+  assert.equal((await as(dave, () => q(`select id from stories where id = $1`, [aliceStory]))).length, 0);
+  assert.equal((await as(alice, () => q(`select id from stories where id = $1`, [aliceStory]))).length, 1);
+
+  // Blocks hide stories both ways.
+  const bobStory = await story(bob);
+  assert.equal((await as(carol, () => q(`select id from stories where id = $1`, [bobStory]))).length, 0);
+  assert.ok(await fails(() => as(carol, () => q(`insert into story_views (story_id) values ($1)`, [bobStory]))));
+});
+
+test('reporting a story hides it for you, and 3 reports expire it', async () => {
+  const { alice, bob, dave } = users;
+  const [row] = await as(dave, () => q(`insert into stories (image_path) values ($1) returning id`, [photo(dave)]));
+  await as(alice, () => q(`insert into reports (story_id, reason) values ($1, 'Spam')`, [row.id]));
+  assert.equal((await as(alice, () => q(`select id from stories where id = $1`, [row.id]))).length, 0);
+  assert.equal((await as(bob, () => q(`select id from stories where id = $1`, [row.id]))).length, 1);
+  await as(bob, () => q(`insert into reports (story_id, reason) values ($1, 'Spam')`, [row.id]));
+  const [{ id: third }] = await q(`select id from profiles where username = 'carol'`);
+  await as(third, () => q(`insert into reports (story_id, reason) values ($1, 'Spam')`, [row.id]));
+  assert.equal(await count(`select count(*) as n from stories where id = $1 and expires_at <= now()`, [row.id]), 1);
+});

@@ -112,6 +112,10 @@ function RootLayoutNav() {
           <Stack.Screen name="inbox" options={{ title: 'Messages' }} />
           <Stack.Screen name="messages/[conversationId]" options={{ title: 'Chat' }} />
           <Stack.Screen name="send-post/[postId]" options={{ presentation: 'modal', title: 'Send to' }} />
+          <Stack.Screen
+            name="story/[authorId]"
+            options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }}
+          />
         </Stack>
         <NotificationToaster />
         <PushNotifications />

@@ -121,16 +121,16 @@ export async function pickPhoto(options: PhotoOptions = {}): Promise<PickedMedia
 
 /**
  * Opens the library for a post, like Instagram's picker: one video (up to VIDEO_MAX_SECONDS)
- * or up to CAROUSEL_MAX photos. Resolves null if cancelled.
+ * or up to CAROUSEL_MAX photos. Pass single for just one item (stories). Resolves null if cancelled.
  */
-export async function pickPostMedia(): Promise<PickedMedia[] | null> {
+export async function pickPostMedia(options: { single?: boolean } = {}): Promise<PickedMedia[] | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images', 'videos'],
     quality: 1,
     preferredAssetRepresentationMode: COMPATIBLE,
     videoMaxDuration: VIDEO_MAX_SECONDS,
-    allowsMultipleSelection: true,
-    selectionLimit: CAROUSEL_MAX,
+    allowsMultipleSelection: !options.single,
+    selectionLimit: options.single ? 1 : CAROUSEL_MAX,
     orderedSelection: true,
   });
   if (result.canceled || result.assets.length === 0) return null;
