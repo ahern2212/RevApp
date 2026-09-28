@@ -26,6 +26,11 @@ export const IMAGE_MAX_SIDE = 2048;
 export const IMAGE_MIN_SIDE = 320;
 /** Wider or taller than 3:1 is a banner or a screenshot strip, not a car photo. */
 export const MAX_ASPECT_RATIO = 3;
+/**
+ * Photos are decoded on the phone to re-encode them, so cap the pixel count: a tiny file can
+ * claim huge dimensions (a "decompression bomb") and exhaust memory. 60 MP covers 48 MP cameras.
+ */
+export const MAX_PIXELS = 60_000_000;
 
 export type PickedInfo = {
   kind: MediaKind;
@@ -76,6 +81,9 @@ export function checkPicked(info: PickedInfo): string | null {
 /** Minimum size and aspect ratio for photos; 0×0 means "unknown" and passes. */
 export function checkDimensions(width: number, height: number, minSide = IMAGE_MIN_SIDE): string | null {
   if (!width || !height) return null;
+  if (width * height > MAX_PIXELS) {
+    return 'That photo has too many pixels to process. Use a smaller version of it.';
+  }
   if (Math.min(width, height) < minSide) {
     return `That photo is too small. Use one at least ${minSide} pixels on each side.`;
   }

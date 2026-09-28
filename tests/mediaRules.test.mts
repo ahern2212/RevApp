@@ -90,6 +90,9 @@ test('checkDimensions turns away tiny and stretched photos, and passes unknown s
   assert.match(checkDimensions(100, 100) ?? '', /too small/);
   assert.match(checkDimensions(4000, 1000) ?? '', /stretched/);
   assert.equal(checkDimensions(3000, 1000), null);
+  // 48 MP phone photos are fine; a 20000×20000 "bomb" is not.
+  assert.equal(checkDimensions(8064, 6048), null);
+  assert.match(checkDimensions(20000, 20000) ?? '', /too many pixels/);
 });
 
 test('checkDuration allows 1–60 seconds', () => {
