@@ -53,7 +53,8 @@ export function PostVideo({ uri, posterUri, active, controls = false, style }: P
     <View style={[styles.frame, style]}>
       <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
       {playing ? (
-        <View style={[StyleSheet.absoluteFill, !firstFrameShown && styles.hidden]} pointerEvents={controls ? 'auto' : 'none'}>
+        <View
+          style={[StyleSheet.absoluteFill, !firstFrameShown && styles.hidden, { pointerEvents: controls ? 'auto' : 'none' }]}>
           <VideoView
             player={player}
             style={StyleSheet.absoluteFill}
@@ -65,12 +66,12 @@ export function PostVideo({ uri, posterUri, active, controls = false, style }: P
         </View>
       ) : null}
       {!controls ? (
-        <View style={styles.badge} pointerEvents="none">
+        <View style={styles.badge}>
           <Ionicons name={muted ? 'volume-mute' : 'volume-high'} size={14} color="#ffffff" />
         </View>
       ) : null}
       {!controls && !playing ? (
-        <View style={styles.play} pointerEvents="none">
+        <View style={styles.play}>
           <Ionicons name="play" size={36} color="#ffffff" />
         </View>
       ) : null}
@@ -87,6 +88,7 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   badge: {
+    pointerEvents: 'none',
     position: 'absolute',
     right: 12,
     bottom: 12,
@@ -98,6 +100,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   play: {
+    pointerEvents: 'none',
     position: 'absolute',
     top: 0,
     right: 0,

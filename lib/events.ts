@@ -1,7 +1,5 @@
+import { MEET_LENGTH_MS } from '@/lib/datetime';
 import { supabase } from '@/lib/supabase';
-
-// Events that started up to this long ago still show (a meet in progress).
-const STILL_ON_MS = 6 * 60 * 60 * 1000;
 
 const EVENT_SELECT =
   'id, host_id, title, description, starts_at, location_name, latitude, longitude, host:profiles!events_host_id_fkey(username), rsvps:event_rsvps(user_id)';
@@ -71,9 +69,21 @@ export async function fetchUpcomingEvents(): Promise<CarEvent[]> {
   const { data, error } = await supabase
     .from('events')
     .select(EVENT_SELECT)
-    .gte('starts_at', new Date(Date.now() - STILL_ON_MS).toISOString())
+    .gte('starts_at', new Date(Date.now() - MEET_LENGTH_MS).toISOString())
     .order('starts_at', { ascending: true })
     .limit(100);
+  if (error) throw error;
+  return (data as unknown as EventRow[]).map(toEvent);
+}
+
+/** Meets that have ended, most recent first. */
+export async function fetchPastEvents(): Promise<CarEvent[]> {
+  const { data, error } = await supabase
+    .from('events')
+    .select(EVENT_SELECT)
+    .lt('starts_at', new Date(Date.now() - MEET_LENGTH_MS).toISOString())
+    .order('starts_at', { ascending: false })
+    .limit(50);
   if (error) throw error;
   return (data as unknown as EventRow[]).map(toEvent);
 }

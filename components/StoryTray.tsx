@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import Animated, { css, FadeInRight } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
+import { PressableScale } from '@/components/PressableScale';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { showError } from '@/lib/confirm';
@@ -17,29 +19,42 @@ let cleanedUpFor: string | null = null;
 
 function Bubble({
   name,
+  avatarName,
   userId,
   unseen,
   label,
   onPress,
   badge,
+  index,
 }: {
   name: string;
+  /** Name for the avatar letter when it differs from the label (e.g. "Your story"). */
+  avatarName?: string;
   userId?: string;
   unseen: boolean;
   label: string;
   onPress: () => void;
   badge?: ReactNode;
+  /** Position in the row, for the staggered entrance. */
+  index: number;
 }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={styles.bubble}>
-      <View style={[styles.ring, unseen ? styles.ringUnseen : styles.ringSeen]}>
-        <Avatar name={name} userId={userId} size={RING - 8} />
-      </View>
+    <Animated.View entering={FadeInRight.delay(Math.min(index, 8) * 60).springify().damping(16)}>
+      <PressableScale
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        scaleTo={0.9}
+        style={styles.bubble}>
+        <Animated.View style={[styles.ring, unseen ? [styles.ringUnseen, motion.pulse] : styles.ringSeen]}>
+          <Avatar name={avatarName ?? name} userId={userId} size={RING - 8} />
+        </Animated.View>
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
+        </Text>
+      </PressableScale>
       {badge}
-      <Text style={styles.name} numberOfLines={1}>
-        {name}
-      </Text>
-    </Pressable>
+    </Animated.View>
   );
 }
 
@@ -118,15 +133,18 @@ export function StoryTray({ refreshSignal }: { refreshSignal: number }) {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       <Bubble
         name="Your story"
+        avatarName={user.username}
         userId={user.id}
         unseen={!!mine}
         label={mine ? 'View your story' : 'Add to your story'}
         onPress={mine ? () => openStories(mine) : addStory}
         badge={addBadge}
+        index={0}
       />
-      {others.map((item) => (
+      {others.map((item, i) => (
         <Bubble
           key={item.authorId}
+          index={i + 1}
           name={item.username}
           userId={item.authorId}
           unseen={item.unseen > 0}
@@ -137,6 +155,21 @@ export function StoryTray({ refreshSignal }: { refreshSignal: number }) {
     </ScrollView>
   );
 }
+
+// Unseen stories get a ring that gently pulses (Reanimated CSS keyframes; css.create so it
+// works on the web too).
+const motion = css.create({
+  pulse: {
+    animationName: {
+      '0%': { transform: [{ scale: 1 }] },
+      '50%': { transform: [{ scale: 1.05 }] },
+      '100%': { transform: [{ scale: 1 }] },
+    },
+    animationDuration: 1800,
+    animationIterationCount: 'infinite',
+    animationTimingFunction: 'ease-in-out',
+  },
+});
 
 const styles = StyleSheet.create({
   row: {

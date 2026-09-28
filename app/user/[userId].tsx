@@ -2,12 +2,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { css } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
 import { FollowStats } from '@/components/FollowStats';
 import { GarageSection } from '@/components/GarageSection';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { OptionsSheet } from '@/components/OptionsSheet';
+import { PressableScale } from '@/components/PressableScale';
 import { PostGrid } from '@/components/PostGrid';
 import { confirmBlock } from '@/components/SafetyActions';
 import Colors from '@/constants/Colors';
@@ -136,16 +138,12 @@ export default function UserProfileScreen() {
         {!isMe && rel && !rel.blocked ? (
           <View style={styles.actions}>
             {rel.counts ? (
-              <Pressable
+              <PressableScale
                 onPress={toggleFollow}
                 disabled={busy}
                 accessibilityRole="button"
                 accessibilityState={{ selected: rel.following, busy }}
-                style={({ pressed }) => [
-                  styles.follow,
-                  rel.following && styles.following,
-                  pressed && styles.pressed,
-                ]}>
+                style={[styles.follow, motion.fade, rel.following && styles.following]}>
                 <Ionicons
                   name={rel.following ? 'checkmark' : 'person-add-outline'}
                   size={16}
@@ -154,24 +152,21 @@ export default function UserProfileScreen() {
                 <Text style={[styles.followText, rel.following && styles.followingText]}>
                   {rel.following ? 'Following' : 'Follow'}
                 </Text>
-              </Pressable>
+              </PressableScale>
             ) : (
               <View style={styles.spacer} />
             )}
-            <Pressable
-              onPress={message}
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.messageButton, pressed && styles.pressed]}>
+            <PressableScale onPress={message} accessibilityRole="button" style={styles.messageButton}>
               <Ionicons name="paper-plane-outline" size={16} color={Colors.light.tint} />
               <Text style={styles.followingText}>Message</Text>
-            </Pressable>
-            <Pressable
+            </PressableScale>
+            <PressableScale
               onPress={() => setMenuOpen(true)}
               accessibilityRole="button"
               accessibilityLabel="More options"
-              style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
+              style={styles.more}>
               <Ionicons name="ellipsis-horizontal" size={20} color={Colors.light.text} />
-            </Pressable>
+            </PressableScale>
           </View>
         ) : null}
 
@@ -206,6 +201,15 @@ export default function UserProfileScreen() {
     </View>
   );
 }
+
+// Eases between the filled "Follow" and the glass "Following" look (a Reanimated CSS
+// transition; css.create so it works on the web too).
+const motion = css.create({
+  fade: {
+    transitionProperty: ['backgroundColor', 'borderColor'],
+    transitionDuration: 220,
+  },
+});
 
 const styles = StyleSheet.create({
   screen: {
@@ -290,9 +294,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.8,
   },
   blockedCard: {
     ...glass,

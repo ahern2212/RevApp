@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
@@ -29,9 +30,11 @@ export function OptionsSheet({ visible, options, onClose, title }: Props) {
   const { bottom } = useSafeAreaInsets();
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
-      <View style={[styles.sheet, { paddingBottom: bottom + 12 }]}>
+      <Animated.View
+        entering={SlideInDown.springify().damping(18).stiffness(180)}
+        style={[styles.sheet, { paddingBottom: bottom + 12 }]}>
         <BlurView intensity={70} tint={blurTint} style={StyleSheet.absoluteFill} />
         <View style={styles.grabber} />
         {title ? <Text style={styles.title}>{title}</Text> : null}
@@ -60,7 +63,7 @@ export function OptionsSheet({ visible, options, onClose, title }: Props) {
           style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

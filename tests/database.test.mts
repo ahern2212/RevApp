@@ -635,3 +635,78 @@ test('unsending the latest message updates the inbox preview', async () => {
   assert.equal(empty.last_message, '');
   assert.equal(empty.last_message_at, null, 'an empty chat drops out of the inbox');
 });
+
+test('featured photos for the sign-in screen: curated first, then top posts, no authors', async () => {
+  const { alice, dave } = users;
+  await q(`insert into featured_cars (image_url, title, position) values ('https://example.com/supra.jpg', 'Supra', 1)`);
+  await q(`insert into featured_cars (image_url, title, active) values ('https://example.com/old.jpg', 'Old', false)`);
+  assert.ok(await fails(() => q(`insert into featured_cars (image_url) values ('http://insecure.example.com/x.jpg')`)));
+  const liked = await post(alice, { car: '2002 Honda S2000' });
+  await as(dave, () => q(`insert into likes (post_id) values ($1)`, [liked]));
+
+  // Signed out: the anon role can call the function but can't read the tables directly.
+  await db.exec(`set role anon`);
+  try {
+    const rows = await q(`select * from featured_photos()`);
+    assert.equal(rows[0].image_url, 'https://example.com/supra.jpg');
+    assert.ok(rows.every((row) => row.title !== 'Old'), 'inactive picks are skipped');
+    assert.ok(rows.some((row) => row.title === '2002 Honda S2000'), 'liked community posts follow');
+    assert.deepEqual(Object.keys(rows[0]).sort(), ['image_path', 'image_url', 'title']);
+    assert.equal((await q(`select * from featured_cars`)).length, 0, 'the table itself is hidden');
+  } finally {
+    await db.exec(`reset role`);
+  }
+});
+
+test('grid posts need 2–6 photos', async () => {
+  const { alice } = users;
+  assert.ok(await post(alice, { layout: 'grid', extra_image_paths: [photo(alice), photo(alice)] }));
+  assert.ok(await fails(() => post(alice, { layout: 'grid' })), 'one photo is not a grid');
+  assert.ok(
+    await fails(() => post(alice, { layout: 'grid', extra_image_paths: Array.from({ length: 6 }, () => photo(alice)) })),
+    'seven photos'
+  );
+  assert.ok(await fails(() => post(alice, { layout: 'mosaic', extra_image_paths: [photo(alice)] })));
+});
+
+test('polls: author adds one, one final vote each, totals for all, voters for the author', async () => {
+  const { alice, bob, carol, dave } = users;
+  const pollPost = await post(alice, { caption: 'Which wheels?' });
+  const addPoll = (userId: string, options: string[]) =>
+    as(userId, () =>
+      q(`insert into polls (post_id, question, options, vote_counts) values ($1, 'Which wheels?', $2, '{99,99}')`, [
+        pollPost,
+        options,
+      ])
+    );
+  assert.ok(await fails(() => addPoll(dave, ['Bronze', 'Black'])), 'only the author');
+  assert.ok(await fails(() => addPoll(alice, ['Only one'])), 'needs 2–4 answers');
+  assert.ok(await fails(() => addPoll(alice, ['Bronze', ' '])), 'answers can\'t be blank');
+  await addPoll(alice, ['Bronze', 'Black', 'Gold']);
+
+  const [poll] = await as(dave, () => q(`select vote_counts from polls where post_id = $1`, [pollPost]));
+  assert.deepEqual(poll.vote_counts, [0, 0, 0], 'totals start at zero whatever the app sends');
+  const [flag] = await as(dave, () => q(`select has_poll from posts where id = $1`, [pollPost]));
+  assert.equal(flag.has_poll, true);
+
+  const vote = (userId: string, option: number) =>
+    as(userId, () => q(`insert into poll_votes (post_id, option_index) values ($1, $2)`, [pollPost, option]));
+  await vote(dave, 1);
+  await vote(bob, 1);
+  assert.ok(await fails(() => vote(dave, 0)), 'one vote each');
+  assert.ok(await fails(() => vote(alice, 3)), 'no such answer');
+  const [totals] = await as(carol, () => q(`select vote_counts from polls where post_id = $1`, [pollPost]));
+  assert.deepEqual(totals.vote_counts, [0, 2, 0], 'everyone sees the totals');
+  assert.equal((await as(carol, () => q(`select * from poll_votes where post_id = $1`, [pollPost]))).length, 0);
+  assert.equal((await as(dave, () => q(`select * from poll_votes where post_id = $1`, [pollPost]))).length, 1, 'your own vote');
+  assert.equal(
+    (await as(alice, () => q(`select * from poll_votes where post_id = $1`, [pollPost]))).length,
+    2,
+    'the author sees who voted'
+  );
+
+  // When a vote goes away (e.g. its account is deleted) the total drops.
+  await q(`delete from poll_votes where post_id = $1 and user_id = $2`, [pollPost, bob]);
+  const [after] = await as(carol, () => q(`select vote_counts from polls where post_id = $1`, [pollPost]));
+  assert.deepEqual(after.vote_counts, [0, 1, 0]);
+});

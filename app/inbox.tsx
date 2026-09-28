@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
@@ -55,7 +56,8 @@ export default function InboxScreen() {
             </View>
           )
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40).duration(300)}>
           <Pressable
             onPress={() =>
               router.push({
@@ -79,6 +81,7 @@ export default function InboxScreen() {
             </View>
             {item.unread ? <View style={styles.dot} /> : null}
           </Pressable>
+          </Animated.View>
         )}
       />
     </View>

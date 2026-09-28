@@ -1,6 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+import { PressableScale } from '@/components/PressableScale';
 
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
@@ -10,11 +13,13 @@ import type { Post } from '@/types';
 export function CarOfTheWeek({ post, onPress }: { post: Post; onPress: () => void }) {
   const likes = post.likedBy.length;
   return (
-    <Pressable
+    <Animated.View entering={FadeInDown.delay(80).duration(400)}>
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Car of the week: ${post.car || 'a build'} by ${post.authorName}, ${likes} likes`}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+      scaleTo={0.97}
+      style={styles.card}>
       <View>
         <Image source={{ uri: post.imageUri }} style={styles.thumb} contentFit="cover" transition={150} />
         {post.videoUri ? (
@@ -34,7 +39,8 @@ export function CarOfTheWeek({ post, onPress }: { post: Post; onPress: () => voi
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
-    </Pressable>
+    </PressableScale>
+    </Animated.View>
   );
 }
 
@@ -48,9 +54,6 @@ const styles = StyleSheet.create({
     padding: 10,
     marginHorizontal: 10,
     marginBottom: 14,
-  },
-  pressed: {
-    opacity: 0.85,
   },
   thumb: {
     width: 64,

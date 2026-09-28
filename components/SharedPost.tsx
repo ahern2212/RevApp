@@ -56,7 +56,7 @@ export function SharedPost({ postId }: { postId: string }) {
             <Image source={{ uri: post.imageUri }} style={styles.image} contentFit="cover" transition={150} />
             {post.videoUri || post.imageUris.length > 1 ? (
               <Ionicons
-                name={post.videoUri ? 'play' : 'copy'}
+                name={post.videoUri ? 'play' : post.layout === 'grid' ? 'grid' : 'copy'}
                 size={16}
                 color="#ffffff"
                 style={styles.kind}

@@ -1,11 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { BlurView } from 'expo-blur';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
+import { FeaturedSlideshow } from '@/components/FeaturedSlideshow';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
+import { PressableScale } from '@/components/PressableScale';
 import Colors from '@/constants/Colors';
-import { glass } from '@/constants/glass';
+import { blurTint, glass } from '@/constants/glass';
 import { useAuth } from '@/context/AuthContext';
+import { type FeaturedPhoto, fetchFeaturedPhotos } from '@/lib/featured';
 import { cleanHandle } from '@/lib/handles';
 
 type Mode = 'signIn' | 'signUp';
@@ -20,6 +25,17 @@ export function SetupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<FeaturedPhoto[]>([]);
+  const onPhotos = photos.length > 0;
+
+  // Featured cars behind the form (your picks, then the community's favorites).
+  useEffect(() => {
+    let cancelled = false;
+    fetchFeaturedPhotos().then((next) => !cancelled && setPhotos(next));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isSignUp = mode === 'signUp';
   const canSubmit =
@@ -46,7 +62,10 @@ export function SetupScreen() {
   return (
     <View style={styles.page}>
       <GlassBackdrop />
+      {onPhotos ? <FeaturedSlideshow photos={photos} /> : null}
       <View style={styles.wrap}>
+      <Animated.View entering={FadeInUp.duration(500)} style={[styles.card, onPhotos && styles.cardOnPhoto]}>
+      {onPhotos ? <BlurView intensity={60} tint={blurTint} style={StyleSheet.absoluteFill} /> : null}
       <Text style={styles.kicker}>REVAPP</Text>
       <Text style={styles.title}>Instagram for cars.</Text>
       <Text style={styles.copy}>
@@ -106,7 +125,7 @@ export function SetupScreen() {
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
         disabled={!canSubmit}
@@ -116,12 +135,13 @@ export function SetupScreen() {
         ) : (
           <Text style={styles.buttonText}>{isSignUp ? 'Create account' : 'Sign in'}</Text>
         )}
-      </Pressable>
+      </PressableScale>
       <Pressable accessibilityRole="button" onPress={switchMode} style={styles.switch}>
         <Text style={styles.switchText}>
           {isSignUp ? 'Already have an account? Sign in' : "New here? Create an account"}
         </Text>
       </Pressable>
+      </Animated.View>
     </View>
     </View>
   );
@@ -146,10 +166,20 @@ const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     justifyContent: 'center',
-    padding: 28,
+    padding: 20,
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
+  },
+  card: {
+    padding: 8,
+  },
+  // Over the photos the form sits on frosted glass so it stays readable.
+  cardOnPhoto: {
+    ...glass,
+    borderRadius: 24,
+    padding: 24,
+    overflow: 'hidden',
   },
   kicker: {
     color: Colors.light.tint,

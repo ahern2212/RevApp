@@ -3,43 +3,57 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Chip } from '@/components/Chip';
+import { PressableScale } from '@/components/PressableScale';
 import { TileMap } from '@/components/TileMap';
 import Colors from '@/constants/Colors';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
-import { type CarEvent, fetchUpcomingEvents, formatEventTime } from '@/lib/events';
+import { type CarEvent, fetchPastEvents, fetchUpcomingEvents, formatEventTime } from '@/lib/events';
 import { useTabBarSpace } from '@/lib/layout';
+
+type Tab = 'upcoming' | 'past';
 
 export default function EventsScreen() {
   const router = useRouter();
   const { user } = useGarage();
   const tabBarSpace = useTabBarSpace();
   const { top } = useSafeAreaInsets();
-  const [events, setEvents] = useState<CarEvent[] | null>(null);
+  const [tab, setTab] = useState<Tab>('upcoming');
+  // Each tab keeps its own list, so switching back is instant.
+  const [lists, setLists] = useState<Record<Tab, CarEvent[] | null>>({ upcoming: null, past: null });
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const events = lists[tab];
+  const isPast = tab === 'past';
 
   const load = useCallback(async () => {
     try {
-      setEvents(await fetchUpcomingEvents());
+      const next = tab === 'past' ? await fetchPastEvents() : await fetchUpcomingEvents();
+      setLists((current) => ({ ...current, [tab]: next }));
       setFailed(false);
     } catch (error) {
       console.warn('Failed to load events', error);
       setFailed(true);
-      setEvents((current) => current ?? []);
+      setLists((current) => ({ ...current, [tab]: current[tab] ?? [] }));
     }
-  }, []);
+  }, [tab]);
+
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    setSelectedId(null);
+  };
 
   // Reload on every visit so new meets and RSVPs show up.
   useFocusEffect(
@@ -73,13 +87,18 @@ export default function EventsScreen() {
           <Text style={styles.title}>Car meets</Text>
           <Text style={styles.subtitle}>Find a meet near you or host your own.</Text>
         </View>
-        <Pressable
+        <PressableScale
           onPress={() => router.push('/events/new')}
           accessibilityRole="button"
-          style={({ pressed }) => [styles.host, pressed && styles.pressed]}>
+          style={styles.host}>
           <Ionicons name="add" size={18} color={Colors.light.onTint} />
           <Text style={styles.hostText}>Host a meet</Text>
-        </Pressable>
+        </PressableScale>
+      </View>
+
+      <View style={styles.tabs} accessibilityRole="tablist">
+        <Chip label="Upcoming" icon="calendar-outline" active={!isPast} onPress={() => switchTab('upcoming')} />
+        <Chip label="Past" icon="time-outline" active={isPast} onPress={() => switchTab('past')} />
       </View>
 
       <TileMap
@@ -111,26 +130,29 @@ export default function EventsScreen() {
       ) : list.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="car-sport-outline" size={40} color={Colors.light.tint} />
-          <Text style={styles.emptyTitle}>No upcoming meets</Text>
-          <Text style={styles.emptyText}>Be the first — tap “Host a meet” to put one on the map.</Text>
+          <Text style={styles.emptyTitle}>{isPast ? 'No past meets yet' : 'No upcoming meets'}</Text>
+          <Text style={styles.emptyText}>
+            {isPast
+              ? 'Meets show up here once they’re over, with the photos people posted from them.'
+              : 'Be the first — tap “Host a meet” to put one on the map.'}
+          </Text>
         </View>
       ) : (
         <View style={styles.list}>
-          {list.map((event) => {
+          {list.map((event, index) => {
             const date = new Date(event.startsAt);
             const going = !!user && event.goingIds.includes(user.id);
             const selected = event.id === selectedId;
             return (
-              <Pressable
-                key={event.id}
+              <Animated.View
+                key={`${tab}-${event.id}`}
+                entering={FadeInDown.delay(Math.min(index, 8) * 50).duration(350)}>
+              <PressableScale
                 onPress={() => open(event.id)}
                 accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.card,
-                  selected && styles.cardSelected,
-                  pressed && styles.pressed,
-                ]}>
-                <View style={styles.dateBadge}>
+                scaleTo={0.97}
+                style={[styles.card, selected && styles.cardSelected, isPast && styles.cardPast]}>
+                <View style={[styles.dateBadge, isPast && styles.dateBadgePast]}>
                   <Text style={styles.month}>
                     {date.toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}
                   </Text>
@@ -153,10 +175,11 @@ export default function EventsScreen() {
                     {event.goingIds.length}
                   </Text>
                   <Text style={[styles.goingLabel, going && styles.goingYes]}>
-                    {going ? 'you’re going' : 'going'}
+                    {isPast ? (going ? 'you went' : 'went') : going ? 'you’re going' : 'going'}
                   </Text>
                 </View>
-              </Pressable>
+              </PressableScale>
+              </Animated.View>
             );
           })}
         </View>
@@ -211,8 +234,9 @@ const styles = StyleSheet.create({
     color: Colors.light.onTint,
     fontWeight: '800',
   },
-  pressed: {
-    opacity: 0.8,
+  tabs: {
+    flexDirection: 'row',
+    gap: 8,
   },
   mapHint: {
     color: Colors.light.muted,
@@ -253,6 +277,12 @@ const styles = StyleSheet.create({
   cardSelected: {
     borderColor: Colors.light.tint,
     borderWidth: 2,
+  },
+  cardPast: {
+    opacity: 0.85,
+  },
+  dateBadgePast: {
+    backgroundColor: Colors.light.border,
   },
   dateBadge: {
     width: 52,

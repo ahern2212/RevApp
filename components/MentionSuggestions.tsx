@@ -5,8 +5,8 @@ import {
   StyleSheet,
   Text,
   type TextInputSelectionChangeEventData,
-  View,
 } from 'react-native';
+import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
 import Colors from '@/constants/Colors';
@@ -64,7 +64,11 @@ export function MentionSuggestions({
 }) {
   if (suggestions.length === 0) return null;
   return (
-    <View style={styles.card} accessibilityRole="menu">
+    <Animated.View
+      entering={FadeInDown.duration(160)}
+      exiting={FadeOut.duration(120)}
+      style={styles.card}
+      accessibilityRole="menu">
       {suggestions.map((driver) => (
         <Pressable
           key={driver.id}
@@ -76,7 +80,7 @@ export function MentionSuggestions({
           <Text style={styles.name}>@{driver.username}</Text>
         </Pressable>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 

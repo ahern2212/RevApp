@@ -27,6 +27,7 @@ import { FeedHeader, useFeedHeaderHeight } from '@/components/FeedHeader';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostCard } from '@/components/PostCard';
+import { RefreshButton } from '@/components/RefreshButton';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
 import { StoryTray } from '@/components/StoryTray';
 import Colors from '@/constants/Colors';
@@ -291,6 +292,8 @@ export default function FeedScreen() {
                 active={feedMode === 'following'}
                 onPress={() => setFeedMode('following')}
               />
+              <View style={styles.modesSpacer} />
+              <RefreshButton refreshing={refreshing} onPress={showNewPosts} />
             </View>
             {feedMode === 'all' && topPost ? (
               <CarOfTheWeek
@@ -355,9 +358,7 @@ export default function FeedScreen() {
         <FeedHeader />
       </Animated.View>
       {newPosts > 0 ? (
-        <Animated.View
-          pointerEvents="box-none"
-          style={[styles.pillWrap, { top: headerHeight + 10 }, pillStyle]}>
+        <Animated.View style={[styles.pillWrap, { top: headerHeight + 10 }, pillStyle]}>
           <Pressable
             onPress={showNewPosts}
             accessibilityRole="button"
@@ -370,10 +371,7 @@ export default function FeedScreen() {
           </Pressable>
         </Animated.View>
       ) : null}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.statusBar, { height: top }, statusBarStyle]}
-      />
+      <Animated.View style={[styles.statusBar, { height: top }, statusBarStyle]} />
       <OptionsSheet
         visible={optionsFor !== null}
         onClose={() => setOptionsFor(null)}
@@ -411,6 +409,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   pillWrap: {
+    pointerEvents: 'box-none',
     position: 'absolute',
     left: 0,
     right: 0,
@@ -440,6 +439,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   statusBar: {
+    pointerEvents: 'none',
     position: 'absolute',
     top: 0,
     left: 0,
@@ -452,10 +452,14 @@ const styles = StyleSheet.create({
   },
   modes: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 12,
+  },
+  modesSpacer: {
+    flex: 1,
   },
   emptyBox: {
     alignItems: 'center',

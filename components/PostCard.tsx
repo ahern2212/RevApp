@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -13,6 +14,8 @@ import Animated, {
 
 import { Avatar } from '@/components/Avatar';
 import { MediaCarousel } from '@/components/MediaCarousel';
+import { MediaGrid } from '@/components/MediaGrid';
+import { PollCard } from '@/components/PollCard';
 import { PostVideo } from '@/components/PostVideo';
 import { RichText } from '@/components/RichText';
 import Colors from '@/constants/Colors';
@@ -115,16 +118,19 @@ export function PostCard({
   };
 
   return (
-    <View style={styles.card}>
+    <Animated.View entering={FadeInDown.duration(350)} style={styles.card}>
       <View style={styles.header}>
-        <Pressable
-          onPress={onAuthorPress}
-          style={styles.author}
-          accessibilityRole="link"
-          accessibilityLabel={`View ${post.authorName}'s profile`}>
-          <Avatar name={post.authorName} userId={post.authorId} size={36} />
+        <View style={styles.author}>
+          <Pressable
+            onPress={onAuthorPress}
+            accessibilityRole="link"
+            accessibilityLabel={`View ${post.authorName}'s profile`}>
+            <Avatar name={post.authorName} userId={post.authorId} size={36} />
+          </Pressable>
           <View style={styles.authorText}>
-            <Text style={styles.username}>{post.authorName}</Text>
+            <Text style={styles.username} onPress={onAuthorPress}>
+              {post.authorName}
+            </Text>
             <Text style={styles.meta} numberOfLines={1}>
               {post.car && onCarPress ? (
                 <Text style={styles.carLink} onPress={onCarPress} accessibilityRole="link">
@@ -137,7 +143,7 @@ export function PostCard({
               {timeAgo(post.createdAt)}
             </Text>
           </View>
-        </Pressable>
+        </View>
         {onOptions ? (
           <Pressable
             onPress={onOptions}
@@ -160,6 +166,8 @@ export function PostCard({
         accessibilityHint={post.videoUri ? 'Tap for sound. Double-tap to like' : 'Double-tap to like'}>
         {post.videoUri ? (
           <PostVideo uri={post.videoUri} posterUri={post.imageUri} active={active} style={styles.photo} />
+        ) : post.imageUris.length > 1 && post.layout === 'grid' ? (
+          <MediaGrid uris={post.imageUris} style={styles.photo} />
         ) : post.imageUris.length > 1 ? (
           <MediaCarousel uris={post.imageUris} style={styles.photo} />
         ) : (
@@ -170,10 +178,12 @@ export function PostCard({
             transition={200}
           />
         )}
-        <Animated.View pointerEvents="none" style={[styles.burst, burstStyle]}>
+        <Animated.View style={[styles.burst, burstStyle]}>
           <Ionicons name="heart" size={96} color="#ffffff" style={styles.burstIcon} />
         </Animated.View>
       </Pressable>
+
+      {post.hasPoll ? <PollCard postId={post.id} authorId={post.authorId} /> : null}
 
       <View style={styles.actions}>
         <Pressable
@@ -255,7 +265,7 @@ export function PostCard({
           </Text>
         </Pressable>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -302,6 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.imagePlaceholder,
   },
   burst: {
+    pointerEvents: 'none',
     position: 'absolute',
     top: 0,
     right: 0,

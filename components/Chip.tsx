@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import Animated, { css } from 'react-native-reanimated';
 
+import { PressableScale } from '@/components/PressableScale';
 import Colors from '@/constants/Colors';
 
 type Props = {
@@ -10,19 +12,30 @@ type Props = {
   icon?: keyof typeof Ionicons.glyphMap;
 };
 
-/** Pill-shaped toggle used for filters and pickers across the app. */
+/** Pill-shaped toggle used for filters and pickers across the app. Fades between states. */
 export function Chip({ label, onPress, active = false, icon }: Props) {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={[styles.chip, active && styles.active]}>
-      {icon ? <Ionicons name={icon} size={14} color={active ? Colors.light.onTint : Colors.light.tint} /> : null}
-      <Text style={[styles.text, active && styles.textActive]}>{label}</Text>
-    </Pressable>
+      scaleTo={0.93}>
+      <Animated.View style={[styles.chip, motion.fade, active && styles.active]}>
+        {icon ? <Ionicons name={icon} size={14} color={active ? Colors.light.onTint : Colors.light.tint} /> : null}
+        <Text style={[styles.text, active && styles.textActive]}>{label}</Text>
+      </Animated.View>
+    </PressableScale>
   );
 }
+
+// The fill eases in and out when the chip is toggled (a Reanimated CSS transition; css.create
+// so it works on the web too).
+const motion = css.create({
+  fade: {
+    transitionProperty: 'backgroundColor',
+    transitionDuration: 180,
+  },
+});
 
 const styles = StyleSheet.create({
   chip: {

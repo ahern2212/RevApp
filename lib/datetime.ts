@@ -43,3 +43,13 @@ export function dayLabel(day: Date, today = new Date()): string {
 export function atTime(day: Date, time: { hours: number; minutes: number }): Date {
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.hours, time.minutes);
 }
+
+/** A meet counts as "happening now" for this long after it starts, then it has ended. */
+export const MEET_LENGTH_MS = 6 * 60 * 60 * 1000;
+
+export type MeetPhase = 'upcoming' | 'live' | 'ended';
+
+export function meetPhase(startsAt: number, now = Date.now()): MeetPhase {
+  if (startsAt > now) return 'upcoming';
+  return now - startsAt < MEET_LENGTH_MS ? 'live' : 'ended';
+}

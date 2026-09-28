@@ -4,10 +4,14 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 
 ## Features
 
+- **Featured cars on sign-in** — a slowly zooming, crossfading slideshow behind the sign-in form: your picks from the `featured_cars` table (add rows in the Supabase dashboard), then the community's most-liked photos of the last 60 days (photo and car name only, no usernames)
 - **Accounts** — email + password sign-up/sign-in; sessions persist until you sign out; delete your account (and everything in it) from Edit profile
-- **Feed** — newest posts first, loads more as you scroll, pull to refresh; the retro banner header slides away as you scroll down and returns when you scroll up; an Everyone / Following switch and a "Car of the week" card (most-liked post of the last 7 days) sit at the top; tap the Feed tab to jump to the top; a "new posts" pill appears when others post
+- **Feed** — newest posts first, loads more as you scroll, pull to refresh or tap the refresh button (the only way on the web); the retro banner header slides away as you scroll down and returns when you scroll up; an Everyone / Following switch and a "Car of the week" card (most-liked post of the last 7 days) sit at the top; tap the Feed tab to jump to the top; a "new posts" pill appears when others post
 - **Stories** — a photo or video that disappears after 24 hours; the tray at the top of the feed shows yours (tap + to add) and the people you follow, unseen first; the full-screen viewer has progress bars, tap left/right, auto-advance, "Seen by" and delete for your own, and report/block for everyone else's
 - **Posts** — up to 10 photos (a swipeable carousel with page dots; arrows on desktop web) or one video (up to 60 seconds) + car (year/make/model suggestions from NHTSA) + caption; "…" menu on your own posts to edit the caption or delete
+- **Posting** — photos first with a thumbnail strip (remove any single photo with its ✕, tap + to add more, first one is the cover), a caption, then Car / Meet / Poll rows that open only when you need them; Share sits in the header
+- **Grid posts** — pick 2–6 photos and choose Carousel or Grid; a grid tiles them in one frame (tap a tile on the post page to see it full screen)
+- **Polls** — add a question with 2–4 answers to any post; one vote each, then animated result bars with your pick marked; everyone sees totals, the author sees who voted
 - **Videos** — play muted and loop when they scroll into view, like Instagram; tap for sound (it stays on for the next video), double-tap to like; grids show a play icon; the post page has full playback controls
 - **Upload safety** — only real photos (JPEG, PNG, WebP, HEIC) and videos (MP4, MOV, 1–60 s, 50 MB) are accepted, checked by their actual bytes, not the file name. Every photo is re-encoded on the device, which strips GPS location and camera details and turns HEIC into JPEG. Tiny or stretched images are refused. The database enforces the same types, sizes, folders and file names, and rate-limits posts, comments, listings, threads, meets and garage cars
 - **Post page** — photo (tap for full screen), car, caption and comments; opened from the feed, grids, Activity and shared links
@@ -31,7 +35,8 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **About** — story, features, community guidelines and a feedback shortcut
 - **App colors** — five full palettes previewed live; voting for one also switches your device to it (the app restarts to repaint). The app-wide default is `DEFAULT_THEME_ID` in `constants/Colors.ts`
 - **Glass UI** — frosted translucent cards over soft theme-colored glows; real blur on the tab bar, notification banner and menus
-- **Events** — car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions, and see photos of the garage cars of everyone going; tag a post with a meet you're hosting or going to ("At a meet?" on the Post tab, from 2 days before to a day after) and it shows in the meet's "Photos from the meet" gallery
+- **Motion** — buttons spring when pressed, cards and list rows fade up as they appear, chips and the Follow button ease between states, menus spring up, unseen story rings pulse, and the refresh arrow spins (Reanimated layout animations and CSS transitions/keyframes, which respect the system Reduce Motion setting)
+- **Events** — Upcoming and Past tabs (past meets show who went and their photos); car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions, and see photos of the garage cars of everyone going; tag a post with a meet you're hosting or going to ("At a meet?" on the Post tab, from 2 days before to a day after) and it shows in the meet's "Photos from the meet" gallery
 
 ## Project layout
 

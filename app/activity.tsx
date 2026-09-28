@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
 import { Avatar } from '@/components/Avatar';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
@@ -85,18 +87,10 @@ export default function ActivityScreen() {
           </View>
         )
       }
-      renderItem={({ item }) => (
-        <Pressable
-          onPress={() =>
-            item.postId
-              ? router.push({ pathname: '/comments/[postId]', params: { postId: item.postId } })
-              : router.push({
-                  pathname: '/user/[userId]',
-                  params: { userId: item.actorId, name: item.actorName },
-                })
-          }
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+      renderItem={({ item, index }) => (
+        <Animated.View
+          entering={FadeInDown.delay(Math.min(index, 10) * 40).duration(300)}
+          style={styles.row}>
           <Pressable
             onPress={() =>
               router.push({
@@ -117,14 +111,26 @@ export default function ActivityScreen() {
               />
             </View>
           </Pressable>
-          <Text style={styles.text} numberOfLines={3}>
-            {describeActivity(item)}
-            <Text style={styles.time}> · {timeAgo(item.createdAt)}</Text>
-          </Text>
-          {item.postImageUri ? (
-            <Image source={{ uri: item.postImageUri }} style={styles.thumb} contentFit="cover" />
-          ) : null}
-        </Pressable>
+          <Pressable
+            onPress={() =>
+              item.postId
+                ? router.push({ pathname: '/comments/[postId]', params: { postId: item.postId } })
+                : router.push({
+                    pathname: '/user/[userId]',
+                    params: { userId: item.actorId, name: item.actorName },
+                  })
+            }
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.rowBody, pressed && styles.pressed]}>
+            <Text style={styles.text} numberOfLines={3}>
+              {describeActivity(item)}
+              <Text style={styles.time}> · {timeAgo(item.createdAt)}</Text>
+            </Text>
+            {item.postImageUri ? (
+              <Image source={{ uri: item.postImageUri }} style={styles.thumb} contentFit="cover" />
+            ) : null}
+          </Pressable>
+        </Animated.View>
       )}
     />
     </View>
@@ -156,6 +162,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
+  },
+  rowBody: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 10,
   },
   pressed: {
     backgroundColor: Colors.light.card,

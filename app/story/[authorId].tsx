@@ -273,8 +273,8 @@ export default function StoryScreen() {
       <Pressable style={styles.leftZone} onPress={prev} accessibilityRole="button" accessibilityLabel="Previous" />
       <Pressable style={styles.rightZone} onPress={next} accessibilityRole="button" accessibilityLabel="Next" />
 
-      <View style={[styles.top, { paddingTop: top + 8 }]} pointerEvents="box-none">
-        <View style={styles.bars} pointerEvents="none">
+      <View style={[styles.top, { paddingTop: top + 8 }]}>
+        <View style={styles.bars}>
           {stories.map((s, i) => (
             <Bar key={s.id} state={i < index ? 'done' : i === index ? 'active' : 'todo'} progress={progress} />
           ))}
@@ -318,8 +318,7 @@ export default function StoryScreen() {
       {!isMine ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.replyWrap}
-          pointerEvents="box-none">
+          style={styles.replyWrap}>
           <View style={[styles.replyBar, { paddingBottom: bottom + 10 }]}>
             <TextInput
               value={reply}
@@ -418,6 +417,7 @@ const styles = StyleSheet.create({
     width: '70%',
   },
   top: {
+    pointerEvents: 'box-none',
     position: 'absolute',
     top: 0,
     left: 0,
@@ -426,6 +426,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   bars: {
+    pointerEvents: 'none',
     flexDirection: 'row',
     gap: 4,
   },
@@ -475,6 +476,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   replyWrap: {
+    pointerEvents: 'box-none',
     position: 'absolute',
     left: 0,
     right: 0,
