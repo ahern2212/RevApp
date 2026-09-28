@@ -8,6 +8,7 @@ import { CarDetailsInput } from '@/components/CarDetailsInput';
 import { Chip } from '@/components/Chip';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { MediaCarousel } from '@/components/MediaCarousel';
+import { MentionSuggestions, useMentions } from '@/components/MentionSuggestions';
 import { PostVideo } from '@/components/PostVideo';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
@@ -34,6 +35,7 @@ export default function PostScreen() {
   const [preparing, setPreparing] = useState(false);
   const [car, setCar] = useState<CarDetails>(EMPTY_CAR);
   const [caption, setCaption] = useState('');
+  const mentions = useMentions(caption, setCaption);
   const [busy, setBusy] = useState(false);
   const tabBarSpace = useTabBarSpace();
   const canShare = !!media && !busy && !preparing;
@@ -170,12 +172,14 @@ export default function PostScreen() {
         <TextInput
           value={caption}
           onChangeText={setCaption}
-          placeholder="Caption"
+          onSelectionChange={mentions.onSelectionChange}
+          placeholder="Caption (use #tags and @mentions)"
           maxLength={CAPTION_MAX}
           placeholderTextColor={Colors.light.placeholder}
           multiline
           style={[styles.input, styles.caption]}
         />
+        <MentionSuggestions suggestions={mentions.suggestions} onPick={mentions.pick} />
         {caption.length > CAPTION_MAX - 200 ? (
           <Text style={styles.counter}>
             {caption.length}/{CAPTION_MAX}

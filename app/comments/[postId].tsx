@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { MediaCarousel } from '@/components/MediaCarousel';
+import { MentionSuggestions, useMentions } from '@/components/MentionSuggestions';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostVideo } from '@/components/PostVideo';
 import { RichText } from '@/components/RichText';
@@ -150,6 +151,7 @@ export default function CommentsScreen() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [menu, setMenu] = useState<SheetOption[] | null>(null);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const mentions = useMentions(draft, setDraft);
   const inputRef = useRef<TextInput>(null);
 
   const dropComments = (match: (comment: Comment) => boolean) => {
@@ -399,6 +401,9 @@ export default function CommentsScreen() {
           />
         )}
       />
+      <View style={styles.mentions}>
+        <MentionSuggestions suggestions={mentions.suggestions} onPick={mentions.pick} />
+      </View>
       {replyTo ? (
         <View style={styles.replyBar}>
           <Text style={styles.replyBarText} numberOfLines={1}>
@@ -414,6 +419,7 @@ export default function CommentsScreen() {
           ref={inputRef}
           value={draft}
           onChangeText={setDraft}
+          onSelectionChange={mentions.onSelectionChange}
           placeholder={replyTo ? 'Write a reply…' : `Comment as ${user?.username ?? 'you'}…`}
           placeholderTextColor={Colors.light.placeholder}
           maxLength={COMMENT_MAX_LENGTH}
@@ -555,6 +561,9 @@ const styles = StyleSheet.create({
   },
   commentHeart: {
     paddingTop: 4,
+  },
+  mentions: {
+    paddingHorizontal: 16,
   },
   replyBar: {
     flexDirection: 'row',

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { tokenize, topTags } from '../lib/richText.ts';
+import { activeMention, insertMention, tokenize, topTags } from '../lib/richText.ts';
 
 test('tokenize finds hashtags and mentions between plain text', () => {
   assert.deepEqual(tokenize('New wheels on the #civic, thanks @maya_k!'), [
@@ -67,4 +67,24 @@ test('topTags counts each tag once per caption and ranks by use', () => {
     { tag: 'a', count: 1 },
     { tag: 'b', count: 1 },
   ]);
+});
+
+test('activeMention finds the @handle being typed at the cursor', () => {
+  assert.deepEqual(activeMention('hi @Ma', 6), { start: 3, query: 'ma' });
+  assert.deepEqual(activeMention('@', 1), { start: 0, query: '' });
+  assert.deepEqual(activeMention('shot by @joe and more', 12), { start: 8, query: 'joe' });
+  assert.equal(activeMention('mail a@b', 8), null, 'emails');
+  assert.equal(activeMention('hi @maya done', 13), null, 'cursor after a space');
+  assert.equal(activeMention('no mention', 10), null);
+});
+
+test('insertMention swaps the partial handle for the full one', () => {
+  assert.deepEqual(insertMention('hi @ma', { start: 3, query: 'ma' }, 6, 'maya_k'), {
+    text: 'hi @maya_k ',
+    cursor: 11,
+  });
+  assert.deepEqual(insertMention('@jo nice', { start: 0, query: 'jo' }, 3, 'joe'), {
+    text: '@joe nice',
+    cursor: 5,
+  });
 });

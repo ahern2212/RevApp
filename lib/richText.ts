@@ -75,3 +75,27 @@ export function topTags(captions: string[], limit: number): TagCount[] {
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
     .slice(0, limit);
 }
+
+export type ActiveMention = { start: number; query: string };
+
+/** The @mention being typed right before the cursor: "hi @ma|" → { start: 3, query: 'ma' }. */
+export function activeMention(text: string, cursor: number): ActiveMention | null {
+  const before = text.slice(0, cursor);
+  const match = /(^|[^\p{L}\p{N}_])@([A-Za-z0-9_.]{0,30})$/u.exec(before);
+  if (!match) return null;
+  return { start: before.length - match[2].length - 1, query: match[2].toLowerCase() };
+}
+
+/** Replaces the mention being typed with "@username " and returns the new text and cursor. */
+export function insertMention(
+  text: string,
+  mention: ActiveMention,
+  cursor: number,
+  username: string
+): { text: string; cursor: number } {
+  const inserted = `@${username} `;
+  return {
+    text: text.slice(0, mention.start) + inserted + text.slice(cursor).replace(/^\s+/, ''),
+    cursor: mention.start + inserted.length,
+  };
+}

@@ -1,4 +1,5 @@
 import { POST_SELECT, type PostRow, toPost } from '@/lib/posts';
+import type { Driver } from '@/lib/profiles';
 import { type TagCount, topTags } from '@/lib/richText';
 import { supabase } from '@/lib/supabase';
 import type { Post } from '@/types';
@@ -9,7 +10,6 @@ const TRENDING_DAYS = 7;
 const TRENDING_SAMPLE = 500;
 const TRENDING_LIMIT = 12;
 
-export type Driver = { id: string; username: string };
 export type SearchResults = { drivers: Driver[]; posts: Post[] };
 
 // Keep only characters that are safe inside a PostgREST filter string

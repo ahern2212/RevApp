@@ -42,6 +42,22 @@ export async function fetchProfiles(ids: string[]): Promise<Profile[]> {
   return (basic.data as ProfileRow[]).map(toProfile);
 }
 
+export type Driver = { id: string; username: string };
+
+/** Drivers whose username starts with `prefix` (for @mention suggestions). */
+export async function searchUsernames(prefix: string): Promise<Driver[]> {
+  // "_" and "%" are wildcards in LIKE; escape them so they match literally.
+  const pattern = `${prefix.toLowerCase().replace(/[\\_%]/g, (c) => `\\${c}`)}%`;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .ilike('username', pattern)
+    .order('username')
+    .limit(6);
+  if (error) throw error;
+  return data as Driver[];
+}
+
 /** The id of the driver with this exact username, or null if nobody has it. */
 export async function fetchProfileIdByUsername(username: string): Promise<string | null> {
   const { data, error } = await supabase
