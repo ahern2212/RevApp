@@ -14,6 +14,7 @@ import { ActivityProvider } from '@/context/ActivityContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProfilesProvider } from '@/context/ProfilesContext';
 import { GarageProvider, useGarage } from '@/context/GarageContext';
+import { MessagesProvider } from '@/context/MessagesContext';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -80,6 +81,7 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={navTheme}>
       <ActivityProvider>
+        <MessagesProvider>
         <Stack screenOptions={{ headerTitleStyle: { fontWeight: '800' }, headerBackTitle: 'Back' }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
@@ -95,6 +97,7 @@ function RootLayoutNav() {
           <Stack.Screen name="forums/new" options={{ presentation: 'modal', title: 'New thread' }} />
           <Stack.Screen name="forums/[threadId]" options={{ title: 'Thread' }} />
           <Stack.Screen name="garage/edit" options={{ presentation: 'modal', title: 'Garage' }} />
+          <Stack.Screen name="garage/[carId]" options={{ title: 'Car' }} />
           <Stack.Screen name="themes" options={{ title: 'App colors' }} />
           <Stack.Screen name="market/new" options={{ presentation: 'modal', title: 'Sell something' }} />
           <Stack.Screen name="market/[listingId]" options={{ title: 'Listing' }} />
@@ -103,9 +106,20 @@ function RootLayoutNav() {
             options={{ presentation: 'modal', title: 'Edit caption' }}
           />
           <Stack.Screen name="user/[userId]" options={{ title: 'Profile' }} />
+          <Stack.Screen name="follows/[userId]" options={{ title: 'Drivers' }} />
+          <Stack.Screen name="blocked" options={{ title: 'Blocked accounts' }} />
+          <Stack.Screen name="notification-settings" options={{ title: 'Notifications' }} />
+          <Stack.Screen name="inbox" options={{ title: 'Messages' }} />
+          <Stack.Screen name="messages/[conversationId]" options={{ title: 'Chat' }} />
+          <Stack.Screen name="send-post/[postId]" options={{ presentation: 'modal', title: 'Send to' }} />
+          <Stack.Screen
+            name="story/[authorId]"
+            options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }}
+          />
         </Stack>
         <NotificationToaster />
         <PushNotifications />
+        </MessagesProvider>
       </ActivityProvider>
     </ThemeProvider>
   );

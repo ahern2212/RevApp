@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -11,11 +10,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile, useProfiles } from '@/context/ProfilesContext';
 import { confirm, showError } from '@/lib/confirm';
+import { pickPhoto } from '@/lib/media';
 import { cleanHandle, HANDLE_MAX, isValidHandle } from '@/lib/handles';
 import { BIO_MAX, deleteMyAccount, updateMyProfile, updateUsername } from '@/lib/profiles';
 import { unregisterPush } from '@/lib/push';
 
-type PickedImage = { uri: string; mimeType?: string };
+type PickedImage = { uri: string };
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -49,15 +49,14 @@ export default function EditProfileScreen() {
   const canSave = changed && usernameValid && busy === null;
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (!result.canceled) {
-      setImage({ uri: result.assets[0].uri, mimeType: result.assets[0].mimeType });
-      setRemoveAvatar(false);
+    try {
+      const picked = await pickPhoto({ square: true, minSide: 128, maxSide: 1024 });
+      if (picked) {
+        setImage(picked);
+        setRemoveAvatar(false);
+      }
+    } catch (error) {
+      showError('Can’t use that photo', error);
     }
   };
 
@@ -183,6 +182,24 @@ export default function EditProfileScreen() {
         accessibilityState={{ disabled: !canSave, busy: busy === 'save' }}
         style={[styles.button, !canSave && styles.buttonDisabled]}>
         <Text style={styles.buttonText}>{busy === 'save' ? 'Saving…' : 'Save'}</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push('/notification-settings')}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}>
+        <Ionicons name="notifications-outline" size={20} color={Colors.light.tint} />
+        <Text style={styles.linkRowText}>Notifications</Text>
+        <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push('/blocked')}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.linkRow, styles.linkRowNext, pressed && styles.linkRowPressed]}>
+        <Ionicons name="ban-outline" size={20} color={Colors.light.tint} />
+        <Text style={styles.linkRowText}>Blocked accounts</Text>
+        <Ionicons name="chevron-forward" size={18} color={Colors.light.muted} />
       </Pressable>
 
       <View style={styles.danger}>
@@ -333,8 +350,31 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
   },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+  },
+  linkRowNext: {
+    marginTop: 10,
+  },
+  linkRowPressed: {
+    opacity: 0.8,
+  },
+  linkRowText: {
+    flex: 1,
+    color: Colors.light.text,
+    fontWeight: '700',
+  },
   danger: {
-    marginTop: 40,
+    marginTop: 20,
     padding: 16,
     borderRadius: 14,
     borderWidth: 1,

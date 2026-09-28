@@ -1,7 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, useScrollToTop } from 'expo-router';
-import { useRef, useState } from 'react';
-import { ActivityIndicator, type FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  type FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewToken,
+} from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -12,19 +21,26 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CarOfTheWeek } from '@/components/CarOfTheWeek';
+import { Chip } from '@/components/Chip';
 import { FeedHeader, useFeedHeaderHeight } from '@/components/FeedHeader';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
-import { OptionsSheet } from '@/components/OptionsSheet';
+import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostCard } from '@/components/PostCard';
+import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
+import { StoryTray } from '@/components/StoryTray';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { confirm, showError } from '@/lib/confirm';
 import { useTabBarSpace } from '@/lib/layout';
+import { fetchCarOfTheWeek } from '@/lib/posts';
 import { sharePost } from '@/lib/share';
 import { useNewPostsCount } from '@/lib/useNewPostsCount';
 import type { Post } from '@/types';
 
 const SNAP_MS = 180;
+// A video starts playing once most of it is on screen.
+const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
 export default function FeedScreen() {
   const {
@@ -41,13 +57,56 @@ export default function FeedScreen() {
     hasMore,
     loadingMore,
     loadMore,
+    forgetPosts,
+    feedMode,
+    setFeedMode,
+    followingUnavailable,
   } = useGarage();
   const router = useRouter();
   const { top } = useSafeAreaInsets();
   const headerHeight = useFeedHeaderHeight();
   const tabBarSpace = useTabBarSpace();
-  const newPosts = useNewPostsCount(posts[0]?.createdAt ?? null);
+  // The "new posts" pill counts everyone's posts, so it only shows on the Everyone feed.
+  const newPosts = useNewPostsCount(feedMode === 'all' ? (posts[0]?.createdAt ?? null) : null);
   const [optionsFor, setOptionsFor] = useState<Post | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [topPost, setTopPost] = useState<Post | null>(null);
+  // Bumped on pull-to-refresh so the stories tray reloads with the feed.
+  const [storySignal, setStorySignal] = useState(0);
+
+  const loadTopPost = useCallback(() => {
+    fetchCarOfTheWeek()
+      .then(setTopPost)
+      .catch((error) => console.warn('Failed to load car of the week', error));
+  }, []);
+  useEffect(loadTopPost, [loadTopPost]);
+
+  const onRefresh = () => {
+    refresh();
+    loadTopPost();
+    setStorySignal((signal) => signal + 1);
+  };
+
+  const { openReport, reportSheet } = useReportSheet((target) => {
+    forgetPosts((post) => post.id === target.id);
+    setTopPost((top) => (top?.id === target.id ? null : top));
+  });
+
+  const block = async (post: Post) => {
+    if (await confirmBlock(post.authorId, post.authorName)) {
+      forgetPosts((p) => p.authorId === post.authorId);
+      setTopPost((top) => (top?.authorId === post.authorId ? null : top));
+    }
+  };
+
+  // The first video that's mostly on screen plays; everything else shows its poster.
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken<Post>[] }) => {
+    const video = viewableItems.find((token) => token.isViewable && token.item.videoUri);
+    setActiveVideoId(video ? video.item.id : null);
+  }, []);
+
+  const openCar = (carId: string | null) =>
+    carId && router.push({ pathname: '/garage/[carId]', params: { carId } });
 
   const openProfile = (post: Post) =>
     router.push({
@@ -55,13 +114,26 @@ export default function FeedScreen() {
       params: { userId: post.authorId, name: post.authorName },
     });
 
-  const share = (post: Post) =>
-    sharePost(post).catch((error) => showError('Could not share', error));
+  // Share: send it to someone in a message, or share the link outside the app.
+  const [shareFor, setShareFor] = useState<Post | null>(null);
+  const share = (post: Post) => setShareFor(post);
+  const shareOptions = (post: Post): SheetOption[] => [
+    {
+      label: 'Send in a message',
+      icon: 'paper-plane-outline',
+      onPress: () => router.push({ pathname: '/send-post/[postId]', params: { postId: post.id } }),
+    },
+    {
+      label: 'Share link',
+      icon: 'share-outline',
+      onPress: () => sharePost(post).catch((error) => showError('Could not share', error)),
+    },
+  ];
 
   const remove = async (post: Post) => {
     const ok = await confirm(
       'Delete this post?',
-      'The photo, likes and comments will be removed for everyone. This can’t be undone.',
+      'The photo or video, likes and comments will be removed for everyone. This can’t be undone.',
       'Delete'
     );
     if (!ok) return;
@@ -71,6 +143,34 @@ export default function FeedScreen() {
       showError('Could not delete', error);
     }
   };
+
+  // "…" menu: edit/delete on your own posts, report/block on everyone else's.
+  const menuFor = (post: Post): SheetOption[] =>
+    post.authorId === user?.id
+      ? [
+          {
+            label: 'Edit caption',
+            icon: 'create-outline',
+            onPress: () => router.push({ pathname: '/edit-post/[postId]', params: { postId: post.id } }),
+          },
+          { label: 'Share', icon: 'paper-plane-outline', onPress: () => share(post) },
+          { label: 'Delete post', icon: 'trash-outline', destructive: true, onPress: () => remove(post) },
+        ]
+      : [
+          { label: 'Share', icon: 'paper-plane-outline', onPress: () => share(post) },
+          {
+            label: 'Report post',
+            icon: 'flag-outline',
+            destructive: true,
+            onPress: () => openReport({ kind: 'post', id: post.id }),
+          },
+          {
+            label: `Block @${post.authorName}`,
+            icon: 'ban-outline',
+            destructive: true,
+            onPress: () => block(post),
+          },
+        ];
 
   // On iOS the list is pushed below the header with contentInset (so pull-to-refresh
   // shows under the header), which makes scroll offsets start at -headerHeight.
@@ -128,7 +228,7 @@ export default function FeedScreen() {
 
   const showNewPosts = () => {
     scrollTarget.current.scrollToTop();
-    refresh();
+    onRefresh();
   };
 
   // Fades in a page-colored strip behind the status bar as the header leaves.
@@ -146,6 +246,7 @@ export default function FeedScreen() {
         renderItem={({ item }: { item: Post }) => (
           <PostCard
             post={item}
+            active={item.id === activeVideoId}
             liked={!!user && item.likedBy.includes(user.id)}
             onLike={() => toggleLike(item.id)}
             onComment={() =>
@@ -158,13 +259,20 @@ export default function FeedScreen() {
             onLikesPress={() =>
               router.push({ pathname: '/likes/[postId]', params: { postId: item.id } })
             }
-            onOptions={item.authorId === user?.id ? () => setOptionsFor(item) : undefined}
+            onCarPress={
+              item.carId
+                ? () => openCar(item.carId)
+                : undefined
+            }
+            onOptions={() => setOptionsFor(item)}
           />
         )}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        viewabilityConfig={VIEWABILITY}
+        onViewableItemsChanged={onViewableItemsChanged}
         refreshing={refreshing}
-        onRefresh={refresh}
+        onRefresh={onRefresh}
         progressViewOffset={headerHeight}
         automaticallyAdjustContentInsets={false}
         contentInset={isIOS ? { top: headerHeight } : undefined}
@@ -172,14 +280,49 @@ export default function FeedScreen() {
         scrollIndicatorInsets={isIOS ? { top: headerHeight } : undefined}
         onEndReached={loadMore}
         onEndReachedThreshold={0.6}
+        ListHeaderComponent={
+          <>
+            <StoryTray refreshSignal={storySignal} />
+            <View style={styles.modes} accessibilityRole="tablist">
+              <Chip label="Everyone" icon="globe-outline" active={feedMode === 'all'} onPress={() => setFeedMode('all')} />
+              <Chip
+                label="Following"
+                icon="people-outline"
+                active={feedMode === 'following'}
+                onPress={() => setFeedMode('following')}
+              />
+            </View>
+            {feedMode === 'all' && topPost ? (
+              <CarOfTheWeek
+                post={topPost}
+                onPress={() =>
+                  router.push({ pathname: '/comments/[postId]', params: { postId: topPost.id } })
+                }
+              />
+            ) : null}
+          </>
+        }
         ListEmptyComponent={
           loadingPosts ? (
             <ActivityIndicator color={Colors.light.tint} style={styles.loading} />
+          ) : followingUnavailable ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.empty}>The Following feed needs the latest database update.</Text>
+            </View>
           ) : feedError ? (
             <View style={styles.emptyBox}>
               <Text style={styles.empty}>Couldn’t load the feed. Check your connection.</Text>
               <Text style={styles.retry} onPress={refresh} accessibilityRole="button">
                 Try again
+              </Text>
+            </View>
+          ) : feedMode === 'following' ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.empty}>
+                Follow drivers to see their builds here. Find people with search, or tap a username in the feed.
+              </Text>
+              <Text style={styles.cta} onPress={() => router.push('/search')} accessibilityRole="button">
+                Find drivers
               </Text>
             </View>
           ) : (
@@ -234,29 +377,15 @@ export default function FeedScreen() {
       <OptionsSheet
         visible={optionsFor !== null}
         onClose={() => setOptionsFor(null)}
-        options={
-          optionsFor
-            ? [
-                {
-                  label: 'Edit caption',
-                  icon: 'create-outline',
-                  onPress: () =>
-                    router.push({
-                      pathname: '/edit-post/[postId]',
-                      params: { postId: optionsFor.id },
-                    }),
-                },
-                { label: 'Share', icon: 'paper-plane-outline', onPress: () => share(optionsFor) },
-                {
-                  label: 'Delete post',
-                  icon: 'trash-outline',
-                  destructive: true,
-                  onPress: () => remove(optionsFor),
-                },
-              ]
-            : []
-        }
+        options={optionsFor ? menuFor(optionsFor) : []}
       />
+      <OptionsSheet
+        visible={shareFor !== null}
+        onClose={() => setShareFor(null)}
+        title="Share"
+        options={shareFor ? shareOptions(shareFor) : []}
+      />
+      {reportSheet}
     </View>
   );
 }
@@ -320,6 +449,13 @@ const styles = StyleSheet.create({
   },
   loading: {
     marginTop: 48,
+  },
+  modes: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   emptyBox: {
     alignItems: 'center',

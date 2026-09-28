@@ -1,8 +1,9 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
-import { CarRender } from '@/components/CarRender';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { useProfile } from '@/context/ProfilesContext';
@@ -17,9 +18,13 @@ function RideCard({ car, onPress }: { car: Car; onPress: () => void }) {
       accessibilityRole="link"
       accessibilityLabel={`${carTitle(car)}, ${name}'s car`}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-      <View style={styles.stage}>
-        <CarRender bodyStyle={car.bodyStyle} paint={car.paint} wheels={car.wheels} stance={car.stance} />
-      </View>
+      {car.photoUri ? (
+        <Image source={{ uri: car.photoUri }} style={styles.stage} contentFit="cover" transition={150} />
+      ) : (
+        <View style={[styles.stage, styles.noPhoto]}>
+          <Ionicons name="car-sport-outline" size={32} color={Colors.light.tint} />
+        </View>
+      )}
       <Text style={styles.title} numberOfLines={1}>
         {carTitle(car)}
       </Text>
@@ -119,11 +124,15 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   stage: {
+    width: '100%',
+    aspectRatio: 16 / 10,
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.35)',
-    paddingHorizontal: 6,
-    paddingVertical: 8,
     marginBottom: 4,
+  },
+  noPhoto: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     color: Colors.light.text,

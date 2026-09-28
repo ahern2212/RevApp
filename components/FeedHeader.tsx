@@ -7,6 +7,7 @@ import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop 
 
 import Colors, { art } from '@/constants/Colors';
 import { useActivity } from '@/context/ActivityContext';
+import { useMessages } from '@/context/MessagesContext';
 
 const BANNER_HEIGHT = 128;
 const HORIZON = 92; // distance from the top of the banner (below the safe area) to the horizon
@@ -121,6 +122,7 @@ export function useFeedHeaderHeight(): number {
 export function FeedHeader() {
   const router = useRouter();
   const { unread } = useActivity();
+  const { unreadCount: unreadChats } = useMessages();
   const { top } = useSafeAreaInsets();
   const [width, setWidth] = useState(0);
   const height = useFeedHeaderHeight();
@@ -166,6 +168,19 @@ export function FeedHeader() {
             {unread > 0 ? (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/inbox')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={unreadChats > 0 ? `Messages, ${unreadChats} unread` : 'Messages'}
+            style={({ pressed }) => [styles.action, styles.actionLight, pressed && styles.actionPressed]}>
+            <Ionicons name="paper-plane-outline" size={20} color={Colors.light.tint} />
+            {unreadChats > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadChats > 9 ? '9+' : unreadChats}</Text>
               </View>
             ) : null}
           </Pressable>

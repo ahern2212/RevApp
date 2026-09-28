@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -12,9 +12,13 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
+import { MediaCarousel } from '@/components/MediaCarousel';
+import { PostVideo } from '@/components/PostVideo';
+import { RichText } from '@/components/RichText';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { timeAgo } from '@/lib/time';
+import { toggleVideoMuted } from '@/lib/videoSound';
 import type { Post } from '@/types';
 
 const DOUBLE_TAP_MS = 300;
@@ -22,6 +26,8 @@ const CAPTION_PREVIEW_CHARS = 110;
 
 type Props = {
   post: Post;
+  /** The post most in view; only its video plays. */
+  active?: boolean;
   liked: boolean;
   onLike: () => void;
   onComment: () => void;
@@ -30,12 +36,15 @@ type Props = {
   onShare: () => void;
   onAuthorPress: () => void;
   onLikesPress: () => void;
-  /** Only passed for the signed-in user's own posts (opens edit/delete options). */
+  /** Opens the tagged garage car's page (only for posts with a tagged car). */
+  onCarPress?: () => void;
+  /** Opens the "…" menu (edit/delete on your own posts, report/block on others'). */
   onOptions?: () => void;
 };
 
 export function PostCard({
   post,
+  active = false,
   liked,
   onLike,
   onComment,
@@ -44,6 +53,7 @@ export function PostCard({
   onShare,
   onAuthorPress,
   onLikesPress,
+  onCarPress,
   onOptions,
 }: Props) {
   const heartScale = useSharedValue(1);
@@ -57,6 +67,10 @@ export function PostCard({
     transform: [{ scale: burstScale.get() }],
   }));
   const lastTap = useRef(0);
+  const soundTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (soundTimer.current) clearTimeout(soundTimer.current);
+  }, []);
   const [captionOpen, setCaptionOpen] = useState(false);
   const longCaption =
     post.caption.length > CAPTION_PREVIEW_CHARS || post.caption.split('\n').length > 2;
@@ -69,14 +83,25 @@ export function PostCard({
     onLike();
   };
 
-  // Double-tap only ever likes (never unlikes), like Instagram.
+  // Double-tap only ever likes (never unlikes), like Instagram. On a video, a single tap
+  // turns the sound on or off once we know it wasn't the first half of a double-tap.
   const handlePhotoPress = () => {
     const now = Date.now();
     if (now - lastTap.current > DOUBLE_TAP_MS) {
       lastTap.current = now;
+      if (post.videoUri) {
+        soundTimer.current = setTimeout(() => {
+          soundTimer.current = null;
+          toggleVideoMuted();
+        }, DOUBLE_TAP_MS);
+      }
       return;
     }
     lastTap.current = 0;
+    if (soundTimer.current) {
+      clearTimeout(soundTimer.current);
+      soundTimer.current = null;
+    }
     burstScale.set(
       withSequence(withTiming(0.3, { duration: 0 }), withSpring(1, { damping: 9, stiffness: 180 }))
     );
@@ -101,7 +126,14 @@ export function PostCard({
           <View style={styles.authorText}>
             <Text style={styles.username}>{post.authorName}</Text>
             <Text style={styles.meta} numberOfLines={1}>
-              {post.car ? `${post.car} · ` : ''}
+              {post.car && onCarPress ? (
+                <Text style={styles.carLink} onPress={onCarPress} accessibilityRole="link">
+                  {post.car}
+                </Text>
+              ) : (
+                post.car
+              )}
+              {post.car ? ' · ' : ''}
               {timeAgo(post.createdAt)}
             </Text>
           </View>
@@ -120,14 +152,24 @@ export function PostCard({
       <Pressable
         onPress={handlePhotoPress}
         accessibilityRole="image"
-        accessibilityLabel={post.car ? `Photo of ${post.car}` : 'Car photo'}
-        accessibilityHint="Double-tap to like">
-        <Image
-          source={{ uri: post.imageUri }}
-          style={styles.photo}
-          contentFit="cover"
-          transition={200}
-        />
+        accessibilityLabel={
+          post.videoUri
+            ? post.car ? `Video of ${post.car}` : 'Car video'
+            : post.car ? `Photo of ${post.car}` : 'Car photo'
+        }
+        accessibilityHint={post.videoUri ? 'Tap for sound. Double-tap to like' : 'Double-tap to like'}>
+        {post.videoUri ? (
+          <PostVideo uri={post.videoUri} posterUri={post.imageUri} active={active} style={styles.photo} />
+        ) : post.imageUris.length > 1 ? (
+          <MediaCarousel uris={post.imageUris} style={styles.photo} />
+        ) : (
+          <Image
+            source={{ uri: post.imageUri }}
+            style={styles.photo}
+            contentFit="cover"
+            transition={200}
+          />
+        )}
         <Animated.View pointerEvents="none" style={[styles.burst, burstStyle]}>
           <Ionicons name="heart" size={96} color="#ffffff" style={styles.burstIcon} />
         </Animated.View>
@@ -198,7 +240,7 @@ export function PostCard({
           <Text style={styles.username} onPress={onAuthorPress}>
             {post.authorName}{' '}
           </Text>
-          {post.caption}
+          <RichText text={post.caption} />
         </Text>
       ) : null}
       {longCaption && !captionOpen ? (
@@ -249,6 +291,10 @@ const styles = StyleSheet.create({
     color: Colors.light.muted,
     fontSize: 12,
     marginTop: 2,
+  },
+  carLink: {
+    color: Colors.light.tint,
+    fontWeight: '700',
   },
   photo: {
     width: '100%',

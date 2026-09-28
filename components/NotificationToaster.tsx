@@ -37,7 +37,8 @@ export function NotificationToaster() {
 
   const open = () => {
     setDismissedId(toast.id);
-    router.push({ pathname: '/comments/[postId]', params: { postId: toast.postId } });
+    if (toast.postId) router.push({ pathname: '/comments/[postId]', params: { postId: toast.postId } });
+    else router.push({ pathname: '/user/[userId]', params: { userId: toast.actorId, name: toast.actorName } });
   };
 
   return (
@@ -51,7 +52,7 @@ export function NotificationToaster() {
         onPress={open}
         accessibilityRole="button"
         accessibilityLiveRegion="polite"
-        accessibilityLabel={`${text}. Open post`}
+        accessibilityLabel={`${text}. ${toast.postId ? 'Open post' : 'Open profile'}`}
         style={({ pressed }) => [styles.toast, pressed && styles.pressed]}>
         <BlurView intensity={60} tint={blurTint} style={StyleSheet.absoluteFill} />
         <View style={styles.icon}>

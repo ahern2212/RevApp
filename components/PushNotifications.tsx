@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { onPushOpened, registerForPush } from '@/lib/push';
 
-/** Registers this device for push while signed in and routes taps to the post. Renders nothing. */
+/** Registers this device for push while signed in and routes taps to the post or profile. Renders nothing. */
 export function PushNotifications() {
   const { user } = useAuth();
   const userId = user?.id;
@@ -17,9 +17,18 @@ export function PushNotifications() {
 
   useEffect(
     () =>
-      onPushOpened((postId) =>
-        router.push({ pathname: '/comments/[postId]', params: { postId } })
-      ),
+      onPushOpened((target) => {
+        if ('postId' in target) {
+          router.push({ pathname: '/comments/[postId]', params: { postId: target.postId } });
+        } else if ('conversationId' in target) {
+          router.push({ pathname: '/messages/[conversationId]', params: { conversationId: target.conversationId } });
+        } else {
+          router.push({
+            pathname: '/user/[userId]',
+            params: { userId: target.userId, ...(target.username ? { name: target.username } : {}) },
+          });
+        }
+      }),
     [router]
   );
 

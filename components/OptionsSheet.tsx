@@ -20,10 +20,12 @@ type Props = {
   visible: boolean;
   options: SheetOption[];
   onClose: () => void;
+  /** Optional question shown above the options, e.g. "Why are you reporting this post?" */
+  title?: string;
 };
 
 /** Bottom sheet of actions (works on iOS, Android and web). */
-export function OptionsSheet({ visible, options, onClose }: Props) {
+export function OptionsSheet({ visible, options, onClose, title }: Props) {
   const { bottom } = useSafeAreaInsets();
 
   return (
@@ -32,6 +34,7 @@ export function OptionsSheet({ visible, options, onClose }: Props) {
       <View style={[styles.sheet, { paddingBottom: bottom + 12 }]}>
         <BlurView intensity={70} tint={blurTint} style={StyleSheet.absoluteFill} />
         <View style={styles.grabber} />
+        {title ? <Text style={styles.title}>{title}</Text> : null}
         {options.map((option) => (
           <Pressable
             key={option.label}
@@ -88,6 +91,12 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: Colors.light.border,
     marginBottom: 8,
+  },
+  title: {
+    color: Colors.light.muted,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 8,
   },
   row: {
     flexDirection: 'row',

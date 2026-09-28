@@ -1,4 +1,4 @@
-import type { BodyStyle, Stance } from '@/lib/carShapes';
+import { readUpload, storagePath } from '@/lib/media';
 import { BUCKET } from '@/lib/posts';
 import { supabase } from '@/lib/supabase';
 
@@ -6,7 +6,7 @@ export const NICKNAME_MAX = 40;
 export const MODS_MAX = 1000;
 
 const CAR_SELECT =
-  'id, owner_id, nickname, year, make, model, body_style, paint_color, wheel_color, stance, mods, photo_path, created_at';
+  'id, owner_id, nickname, year, make, model, mods, photo_path, created_at';
 
 type CarRow = {
   id: string;
@@ -15,10 +15,6 @@ type CarRow = {
   year: number | null;
   make: string;
   model: string;
-  body_style: BodyStyle;
-  paint_color: string;
-  wheel_color: string;
-  stance: Stance;
   mods: string;
   photo_path: string | null;
   created_at: string;
@@ -31,10 +27,6 @@ export type Car = {
   year: string;
   make: string;
   model: string;
-  bodyStyle: BodyStyle;
-  paint: string;
-  wheels: string;
-  stance: Stance;
   mods: string;
   photoPath: string | null;
   photoUri: string | null;
@@ -50,10 +42,6 @@ function toCar(row: CarRow): Car {
     year: row.year ? String(row.year) : '',
     make: row.make,
     model: row.model,
-    bodyStyle: row.body_style,
-    paint: row.paint_color,
-    wheels: row.wheel_color,
-    stance: row.stance,
     mods: row.mods,
     photoPath: row.photo_path,
     photoUri: row.photo_path
@@ -95,14 +83,12 @@ export async function fetchCar(carId: string): Promise<Car | null> {
   return data ? toCar(data as CarRow) : null;
 }
 
-type PhotoChange = { uri: string; mimeType?: string } | 'remove' | undefined;
+type PhotoChange = { uri: string } | 'remove' | undefined;
 
-async function uploadPhoto(ownerId: string, photo: { uri: string; mimeType?: string }) {
-  const contentType = photo.mimeType ?? 'image/jpeg';
-  const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+async function uploadPhoto(ownerId: string, photo: { uri: string }) {
+  const { body, contentType, ext } = await readUpload(photo.uri, 'image');
   // Flat in the owner's folder so account deletion's folder cleanup catches it.
-  const path = `${ownerId}/car-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
-  const body = await (await fetch(photo.uri)).arrayBuffer();
+  const path = storagePath(ownerId, 'car', ext);
   const { error } = await supabase.storage.from(BUCKET).upload(path, body, { contentType });
   if (error) throw error;
   return path;
@@ -115,10 +101,6 @@ function toRow(input: CarInput) {
     year: Number.isInteger(year) && year >= 1900 ? year : null,
     make: input.make.trim(),
     model: input.model.trim(),
-    body_style: input.bodyStyle,
-    paint_color: input.paint,
-    wheel_color: input.wheels,
-    stance: input.stance,
     mods: input.mods.trim(),
   };
 }

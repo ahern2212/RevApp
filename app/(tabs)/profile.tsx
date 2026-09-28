@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { FollowStats } from '@/components/FollowStats';
 import { GarageSection } from '@/components/GarageSection';
 import { PostGrid } from '@/components/PostGrid';
 import Colors from '@/constants/Colors';
@@ -13,14 +14,16 @@ import { THEMES } from '@/constants/themes';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
 import { confirm } from '@/lib/confirm';
+import { fetchFollowCounts, type FollowCounts, type FollowList } from '@/lib/follows';
 import { useTabBarSpace } from '@/lib/layout';
 import { fetchUserPosts } from '@/lib/posts';
 import type { Post } from '@/types';
 
-type Section = 'posts' | 'saved';
+type Section = 'posts' | 'videos' | 'saved';
 
-const SECTIONS: { key: Section; label: string; icon: 'grid-outline' | 'bookmark-outline' }[] = [
+const SECTIONS: { key: Section; label: string; icon: 'grid-outline' | 'play-circle-outline' | 'bookmark-outline' }[] = [
   { key: 'posts', label: 'Posts', icon: 'grid-outline' },
+  { key: 'videos', label: 'Videos', icon: 'play-circle-outline' },
   { key: 'saved', label: 'Saved', icon: 'bookmark-outline' },
 ];
 
@@ -31,6 +34,7 @@ export default function ProfileScreen() {
   const profile = useProfile(user?.id);
   const [section, setSection] = useState<Section>('posts');
   const [mine, setMine] = useState<Post[] | null>(null);
+  const [counts, setCounts] = useState<FollowCounts | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const userId = user?.id;
 
@@ -38,6 +42,9 @@ export default function ProfileScreen() {
   // so new posts, deletes and like counts are current.
   const loadMine = useCallback(async () => {
     if (!userId) return;
+    fetchFollowCounts(userId)
+      .then(setCounts)
+      .catch((error) => console.warn('Failed to load follow counts', error));
     try {
       setMine(await fetchUserPosts(userId));
     } catch (error) {
@@ -64,7 +71,8 @@ export default function ProfileScreen() {
   // Until the first load finishes, fall back to what the feed already has.
   const myPosts = mine ?? posts.filter((post) => post.authorId === userId);
   const likes = myPosts.reduce((total, post) => total + post.likedBy.length, 0);
-  const shown = section === 'posts' ? myPosts : saved;
+  const shown =
+    section === 'posts' ? myPosts : section === 'videos' ? myPosts.filter((post) => post.videoUri) : saved;
 
   return (
     <View style={styles.screen}>
@@ -83,6 +91,17 @@ export default function ProfileScreen() {
             {myPosts.length} {myPosts.length === 1 ? 'post' : 'posts'} · {likes} likes ·{' '}
             {saved.length} saved
           </Text>
+          {counts && userId ? (
+            <FollowStats
+              counts={counts}
+              onOpen={(list: FollowList) =>
+                router.push({
+                  pathname: '/follows/[userId]',
+                  params: { userId, name: user?.username ?? '', list },
+                })
+              }
+            />
+          ) : null}
         </View>
       </View>
       {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
@@ -144,7 +163,9 @@ export default function ProfileScreen() {
         emptyText={
           section === 'posts'
             ? 'Your garage is empty. Post a car from the Post tab.'
-            : 'Nothing saved yet. Tap the bookmark on any post to keep it here.'
+            : section === 'videos'
+              ? 'No videos yet. Pick a video on the Post tab to share one.'
+              : 'Nothing saved yet. Tap the bookmark on any post to keep it here.'
         }
       />
     </ScrollView>

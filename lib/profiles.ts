@@ -1,9 +1,12 @@
 import { isValidHandle } from '@/lib/handles';
+import { readUpload } from '@/lib/media';
 import { supabase } from '@/lib/supabase';
 
 export const AVATAR_BUCKET = 'avatars';
 export const BIO_MAX = 160;
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024; // matches the avatars bucket limit
 const POST_BUCKET = 'post-images';
+const VIDEO_BUCKET = 'post-videos';
 
 export type Profile = {
   id: string;
@@ -39,10 +42,37 @@ export async function fetchProfiles(ids: string[]): Promise<Profile[]> {
   return (basic.data as ProfileRow[]).map(toProfile);
 }
 
+export type Driver = { id: string; username: string };
+
+/** Drivers whose username starts with `prefix` (for @mention suggestions). */
+export async function searchUsernames(prefix: string): Promise<Driver[]> {
+  // "_" and "%" are wildcards in LIKE; escape them so they match literally.
+  const pattern = `${prefix.toLowerCase().replace(/[\\_%]/g, (c) => `\\${c}`)}%`;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .ilike('username', pattern)
+    .order('username')
+    .limit(6);
+  if (error) throw error;
+  return data as Driver[];
+}
+
+/** The id of the driver with this exact username, or null if nobody has it. */
+export async function fetchProfileIdByUsername(username: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username.toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { id: string } | null)?.id ?? null;
+}
+
 type ProfileUpdate = {
   bio: string;
   /** New picture picked on the device, if any. */
-  image?: { uri: string; mimeType?: string };
+  image?: { uri: string };
   removeAvatar?: boolean;
 };
 
@@ -51,10 +81,8 @@ export async function updateMyProfile(current: Profile, update: ProfileUpdate): 
   let avatarPath = update.removeAvatar ? null : current.avatarPath;
 
   if (update.image) {
-    const contentType = update.image.mimeType ?? 'image/jpeg';
-    const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+    const { body, contentType, ext } = await readUpload(update.image.uri, 'image', AVATAR_MAX_BYTES);
     avatarPath = `${current.id}/avatar-${Date.now()}.${ext}`;
-    const body = await (await fetch(update.image.uri)).arrayBuffer();
     const upload = await supabase.storage.from(AVATAR_BUCKET).upload(avatarPath, body, { contentType });
     if (upload.error) throw upload.error;
   }
@@ -110,12 +138,13 @@ async function removeFolder(bucket: string, folder: string): Promise<void> {
 }
 
 /**
- * Permanently deletes the signed-in user: their photos first, then the account itself
+ * Permanently deletes the signed-in user: their photos and videos first, then the account itself
  * (posts, likes, comments, saves, events and notifications cascade in the database).
  */
 export async function deleteMyAccount(userId: string): Promise<void> {
   await removeFolder(POST_BUCKET, userId);
   await removeFolder(AVATAR_BUCKET, userId).catch(() => {}); // bucket may not exist yet
+  await removeFolder(VIDEO_BUCKET, userId).catch(() => {}); // bucket may not exist yet
   const { error } = await supabase.rpc('delete_my_account');
   if (error) throw error;
   // The server session is gone with the user; just clear it on this device.

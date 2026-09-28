@@ -77,14 +77,28 @@ export async function unregisterPush(): Promise<void> {
 }
 
 /** Calls `onOpen(postId)` when the user taps a push, including one that launched the app. */
-export function onPushOpened(onOpen: (postId: string) => void): () => void {
+/** Where a tapped push should go: a post (likes, comments), a profile (new follower) or a chat. */
+export type PushTarget =
+  | { postId: string }
+  | { userId: string; username?: string }
+  | { conversationId: string };
+
+export function onPushOpened(onOpen: (target: PushTarget) => void): () => void {
   if (!pushSupported) return () => {};
 
   const handle = (response: Notifications.NotificationResponse | null) => {
-    const postId = response?.notification.request.content.data?.postId;
-    if (typeof postId !== 'string') return;
+    const data = response?.notification.request.content.data;
+    const target: PushTarget | null =
+      typeof data?.postId === 'string'
+        ? { postId: data.postId }
+        : typeof data?.conversationId === 'string'
+          ? { conversationId: data.conversationId }
+          : typeof data?.userId === 'string'
+            ? { userId: data.userId, username: typeof data.username === 'string' ? data.username : undefined }
+            : null;
+    if (!target) return;
     Notifications.clearLastNotificationResponse();
-    onOpen(postId);
+    onOpen(target);
   };
 
   handle(Notifications.getLastNotificationResponse());

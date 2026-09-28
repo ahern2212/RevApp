@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -11,6 +10,7 @@ import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
 import { showError } from '@/lib/confirm';
+import { pickPhoto } from '@/lib/media';
 import {
   CATEGORY_ICONS,
   CONDITIONS,
@@ -26,7 +26,7 @@ import {
   TITLE_MAX,
 } from '@/lib/listings';
 
-type Photo = { uri: string; mimeType?: string };
+type Photo = { uri: string };
 
 export default function NewListingScreen() {
   const router = useRouter();
@@ -50,14 +50,13 @@ export default function NewListingScreen() {
         ? 'Enter a price in whole dollars (0 for free).'
         : null;
 
-  const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled) setPhoto({ uri: result.assets[0].uri, mimeType: result.assets[0].mimeType });
+  const choosePhoto = async () => {
+    try {
+      const picked = await pickPhoto({ square: true });
+      if (picked) setPhoto(picked);
+    } catch (error) {
+      showError('Can’t use that photo', error);
+    }
   };
 
   const post = async () => {
@@ -90,7 +89,7 @@ export default function NewListingScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets>
         <Pressable
-          onPress={pickPhoto}
+          onPress={choosePhoto}
           accessibilityRole="button"
           accessibilityLabel={photo ? 'Change photo' : 'Add a photo'}
           style={styles.photoPicker}>

@@ -14,6 +14,7 @@ import {
 
 import { Avatar } from '@/components/Avatar';
 import { GoingCars } from '@/components/GoingCars';
+import { PostGrid } from '@/components/PostGrid';
 import { TileMap } from '@/components/TileMap';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
@@ -22,6 +23,8 @@ import { useProfile } from '@/context/ProfilesContext';
 import { confirm, showError } from '@/lib/confirm';
 import { type CarEvent, deleteEvent, fetchEvent, formatEventTime, setGoing } from '@/lib/events';
 import { directionsUrl } from '@/lib/geo';
+import { fetchEventPosts } from '@/lib/posts';
+import type { Post } from '@/types';
 
 const MAX_FACES = 8;
 
@@ -42,6 +45,19 @@ export default function EventScreen() {
   const [saving, setSaving] = useState(false);
   const [now] = useState(() => Date.now()); // when the screen opened
   const event = loaded?.id === eventId ? loaded.event : undefined;
+  const [photos, setPhotos] = useState<{ id: string; posts: Post[] } | null>(null);
+  const meetPosts = photos?.id === eventId ? photos.posts : [];
+
+  // Posts people tagged with this meet.
+  useEffect(() => {
+    let cancelled = false;
+    fetchEventPosts(eventId)
+      .then((posts) => !cancelled && setPhotos({ id: eventId, posts }))
+      .catch((error) => console.warn('Failed to load meet photos', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,6 +213,16 @@ export default function EventScreen() {
 
       <GoingCars ownerIds={event.goingIds} onOpenProfile={(id) => openProfile(id)} />
 
+      {meetPosts.length > 0 || going || isHost ? (
+        <View style={styles.photos}>
+          <Text style={styles.photosTitle}>Photos from the meet</Text>
+          <PostGrid
+            posts={meetPosts}
+            emptyText="Posting from the meet? Pick it under “At a meet?” on the Post tab."
+          />
+        </View>
+      ) : null}
+
       {isHost ? (
         <Pressable onPress={remove} accessibilityRole="button" style={styles.delete}>
           <Ionicons name="trash-outline" size={16} color={Colors.light.danger} />
@@ -209,6 +235,15 @@ export default function EventScreen() {
 }
 
 const styles = StyleSheet.create({
+  photos: {
+    gap: 8,
+    marginTop: 12,
+  },
+  photosTitle: {
+    color: Colors.light.text,
+    fontWeight: '800',
+    fontSize: 16,
+  },
   screen: {
     flex: 1,
     backgroundColor: Colors.light.background,

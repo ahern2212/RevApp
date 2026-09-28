@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CarRender } from '@/components/CarRender';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
@@ -13,19 +12,25 @@ import { useTabBarSpace } from '@/lib/layout';
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const FEATURES: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'images-outline', title: 'Share builds', text: 'Post your car, like and comment with the car button.' },
-  { icon: 'car-sport-outline', title: 'Your garage', text: 'Add your cars and get a custom render in your paint.' },
+  { icon: 'images-outline', title: 'Share builds', text: 'Post up to 10 photos or a video; like and comment with the car button.' },
+  { icon: 'people-outline', title: 'Follow drivers', text: 'Follow people and switch the feed to just their builds.' },
+  { icon: 'paper-plane-outline', title: 'Messages', text: 'Chat with drivers and sellers, and send them posts.' },
+  { icon: 'car-sport-outline', title: 'Your garage', text: 'Every car gets a page with its mods and a build log of tagged posts.' },
+  { icon: 'compass-outline', title: 'Explore', text: 'Trending #tags, top posts and drivers to follow.' },
   { icon: 'map-outline', title: 'Meets', text: 'Find car meets on the map and see who’s rolling in.' },
   { icon: 'chatbubbles-outline', title: 'Forums', text: 'Ask for help, share builds, talk shop.' },
   { icon: 'storefront-outline', title: 'Market', text: 'Buy and sell cars, parts and wheels locally.' },
+  { icon: 'shield-checkmark-outline', title: 'Safe by design', text: 'Real photos only, no location data, and report or block in two taps.' },
   { icon: 'color-palette-outline', title: 'Your look', text: 'Vote on the app’s colors and switch themes.' },
 ];
 
 const GUIDELINES: { icon: IconName; text: string }[] = [
+  { icon: 'car-sport-outline', text: 'Keep it about cars: your builds, parts, meets and car culture.' },
   { icon: 'heart-outline', text: 'Respect every build — stock or stanced, budget or big money.' },
   { icon: 'speedometer-outline', text: 'Drive safe. No street racing or reckless driving content.' },
   { icon: 'pricetag-outline', text: 'List honestly: real photos, real condition, real prices.' },
   { icon: 'lock-closed-outline', text: 'Protect privacy — no plates or personal info without consent.' },
+  { icon: 'flag-outline', text: 'See something that breaks these rules? Tap “…” and report it, or block the account.' },
 ];
 
 export default function AboutScreen() {
@@ -47,7 +52,7 @@ export default function AboutScreen() {
             A home for your builds, your crew and your next meet.
           </Text>
           <View style={styles.heroCar}>
-            <CarRender bodyStyle="jdm" paint={Colors.light.tint} wheels="#232228" stance="lowered" />
+            <Ionicons name="car-sport" size={72} color={Colors.light.tint} />
           </View>
         </View>
 
@@ -151,7 +156,7 @@ const styles = StyleSheet.create({
   },
   heroCar: {
     marginTop: 6,
-    paddingHorizontal: 8,
+    alignItems: 'center',
   },
   sectionTitle: {
     color: Colors.light.text,

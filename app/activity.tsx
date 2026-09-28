@@ -16,8 +16,15 @@ import { Avatar } from '@/components/Avatar';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
 import { useActivity } from '@/context/ActivityContext';
-import { type Activity, describeActivity, fetchActivity } from '@/lib/activity';
+import { type Activity, type ActivityType, describeActivity, fetchActivity } from '@/lib/activity';
 import { timeAgo } from '@/lib/time';
+
+const ACTIVITY_ICONS: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
+  like: 'heart',
+  comment: 'car-sport',
+  follow: 'person-add',
+  mention: 'at',
+};
 
 export default function ActivityScreen() {
   const router = useRouter();
@@ -73,7 +80,7 @@ export default function ActivityScreen() {
             <Ionicons name="heart-outline" size={40} color={Colors.light.tint} />
             <Text style={styles.emptyTitle}>No activity yet</Text>
             <Text style={styles.emptyText}>
-              When someone likes or comments on your posts, you’ll see it here.
+              When someone follows you, mentions you, or likes or comments on your posts, you’ll see it here.
             </Text>
           </View>
         )
@@ -81,7 +88,12 @@ export default function ActivityScreen() {
       renderItem={({ item }) => (
         <Pressable
           onPress={() =>
-            router.push({ pathname: '/comments/[postId]', params: { postId: item.postId } })
+            item.postId
+              ? router.push({ pathname: '/comments/[postId]', params: { postId: item.postId } })
+              : router.push({
+                  pathname: '/user/[userId]',
+                  params: { userId: item.actorId, name: item.actorName },
+                })
           }
           accessibilityRole="button"
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -99,7 +111,7 @@ export default function ActivityScreen() {
             <Avatar name={item.actorName} userId={item.actorId} size={44} />
             <View style={styles.kind}>
               <Ionicons
-                name={item.type === 'like' ? 'heart' : 'car-sport'}
+                name={ACTIVITY_ICONS[item.type]}
                 size={11}
                 color={Colors.light.onTint}
               />
