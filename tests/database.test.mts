@@ -29,6 +29,10 @@ const SUPABASE_STUBS = `
     email text,
     raw_user_meta_data jsonb not null default '{}'::jsonb
   );
+  -- Supabase Auth adds new users as this role, which has no rights on the public tables.
+  create role supabase_auth_admin nologin;
+  grant usage on schema auth to supabase_auth_admin;
+  grant select, insert on auth.users to supabase_auth_admin;
   create function auth.uid() returns uuid language sql stable as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
   $$;
@@ -709,4 +713,57 @@ test('polls: author adds one, one final vote each, totals for all, voters for th
   await q(`delete from poll_votes where post_id = $1 and user_id = $2`, [pollPost, bob]);
   const [after] = await as(carol, () => q(`select vote_counts from polls where post_id = $1`, [pollPost]));
   assert.deepEqual(after.vote_counts, [0, 1, 0]);
+});
+
+// ─── Sign-up (last, so the extra accounts don't change counts in the tests above) ───
+
+/** Creates an account the way Supabase Auth does: a row in auth.users, written as its own role. */
+async function signUp(email: string, metadata: Record<string, unknown>) {
+  await db.exec('set role supabase_auth_admin');
+  let id: string;
+  try {
+    [{ id }] = await q(`insert into auth.users (email, raw_user_meta_data) values ($1, $2::jsonb) returning id`, [
+      email,
+      JSON.stringify(metadata),
+    ]);
+  } finally {
+    await db.exec('reset role');
+  }
+  const [profile] = await q(`select username from profiles where id = $1`, [id]);
+  assert.ok(profile, `no profile was created for ${email}`);
+  return { id, username: profile.username as string };
+}
+
+test('sign-up never fails on the handle: it is cleaned, shortened or made unique', async () => {
+  const joe = await signUp('joe@example.com', { username: "Joe's Car!" });
+  assert.equal(joe.username, 'joescar');
+  assert.equal((await signUp('mixed@example.com', { username: '  MiXeD.Case_9 ' })).username, 'mixed.case_9');
+  assert.equal((await signUp('long@example.com', { username: 'a'.repeat(40) })).username, 'a'.repeat(24));
+  assert.equal((await signUp('Speedy.Racer+cars@example.com', {})).username, 'speedy.racercars', 'no handle: from the email');
+
+  const short = await signUp('x@example.com', { username: 'x' });
+  const emoji = await signUp('emoji@example.com', { username: '🚗🏁' });
+  assert.equal(short.username, 'driver', 'too short: a default');
+  assert.match(emoji.username, /^driver\d{1,4}$/, 'the default is taken: numbers added');
+
+  const taken = await signUp('alice.two@example.com', { username: 'alice' });
+  assert.match(taken.username, /^alice\d{1,4}$/, 'a taken handle gets numbers added');
+
+  const [check] = await q(
+    `select count(*) filter (where username !~ '^[a-z0-9_.]{2,30}$') as invalid,
+            count(*) - count(distinct username) as duplicates
+     from profiles`
+  );
+  assert.deepEqual([Number(check.invalid), Number(check.duplicates)], [0, 0]);
+});
+
+test('a new account can see its profile, post and follow straight away', async () => {
+  const fresh = await signUp('fresh@example.com', { username: 'fresh_driver' });
+  const mine = await as(fresh.id, () => q(`select username, bio, avatar_path from profiles where id = $1`, [fresh.id]));
+  assert.deepEqual(mine, [{ username: 'fresh_driver', bio: '', avatar_path: null }]);
+
+  await post(fresh.id);
+  await as(fresh.id, () => q(`insert into follows (followee_id) values ($1)`, [users.alice]));
+  assert.equal(await count(`select count(*) as n from posts where author_id = $1`, [fresh.id]), 1);
+  assert.equal(await count(`select count(*) as n from follows where follower_id = $1`, [fresh.id]), 1);
 });

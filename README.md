@@ -47,7 +47,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 | `context/` | App state: `AuthContext` (session), `GarageContext` (feed, likes, saves, posting), `ActivityContext` (realtime notifications + unread count), `ProfilesContext` (bio/picture cache), `MessagesContext` (inbox + unread count, live) |
 | `lib/` | Data + helpers: `supabase`, `posts`, `media` (validated photo/video picker + upload check), `mediaRules` (upload limits, byte sniffing), `videoPoster`, `videoSound`, `safety` (reports, blocks), `follows`, `richText` (tag/mention tokenizer), `messages`, `chat` (unread/timestamp rules), `stories`, `uploads` (checked photo/video upload), `notificationSettings`, `commentThreads`, `comments`, `activity`, `search`, `push`, `vehicles`, `share`, `confirm`, `time`, `layout`, `useNewPostsCount`, `profiles`, `events`, `geo` (map math), `geocode` (place search), `datetime`, `cars`, `forums`, `themeVotes` |
 | `constants/` | `themes.ts` (all palettes), `Colors.ts` (picks the active one), `glass.ts` (shared glass card style) |
-| `tests/` | Unit tests for pure helpers, and `database.test.mts`: runs all migrations on PGlite with Supabase stand-ins and checks the security rules as real users (`npm test`, Node's built-in runner) |
+| `tests/` | Unit tests for pure helpers, and `database.test.mts`: runs all migrations on PGlite with Supabase stand-ins and checks the security rules as real users (`npm test`, Node's built-in runner); `web/`: sign-up and sign-in on the exported website in headless Chrome with Supabase mocked (`npm run test:web`) |
 | `supabase/migrations/` | Database schema, run in order in the Supabase SQL Editor |
 | `scripts/deploy-web.mjs` | Publishes the website (see below) |
 | `scripts/print-migrations.mjs` | Prints migrations from a given one onward, for pasting into the SQL Editor |
@@ -73,6 +73,7 @@ npm run web           # web only
 npm run lint          # ESLint
 npx tsc --noEmit      # type-check
 npm test              # unit tests + every migration run on an in-process Postgres (PGlite) with RLS checks
+npx expo export --platform web && npm run test:web   # sign-up/sign-in in headless Chrome against the built site
 ```
 
 `expo-dev-client` is installed, so `expo start` targets a development build by default; press **s** to switch to Expo Go.
@@ -89,7 +90,7 @@ npm run deploy:web -- --domain=garage   # first deploy only: choose garage.expo.
 
 | Workflow | Runs on | What it does |
 | --- | --- | --- |
-| `.github/workflows/ci.yml` | every pull request | `expo lint`, `tsc --noEmit`, `npm test`, and a web export to prove the site builds |
+| `.github/workflows/ci.yml` | every pull request | `expo lint`, `tsc --noEmit`, `npm test`, and a web export to prove the site builds, then sign-up/sign-in tests on it |
 | `.github/workflows/deploy.yml` | push to `main`, or manually | runs CI, then builds the website and publishes it to EAS Hosting (`eas deploy --prod`) |
 | `.github/workflows/build.yml` | a `v*` tag (e.g. `v1.2.0`), or manually | runs CI, then starts an EAS build (pick profile/platform when run manually; optional store submit) |
 
