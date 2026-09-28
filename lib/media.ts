@@ -123,18 +123,21 @@ export async function pickPhoto(options: PhotoOptions = {}): Promise<PickedMedia
  * Opens the library for a post, like Instagram's picker: one video (up to VIDEO_MAX_SECONDS)
  * or up to CAROUSEL_MAX photos. Pass single for just one item (stories). Resolves null if cancelled.
  */
-export async function pickPostMedia(options: { single?: boolean } = {}): Promise<PickedMedia[] | null> {
+export async function pickPostMedia(
+  options: { single?: boolean; /** Most items to pick (e.g. the room left in a carousel). */ limit?: number } = {}
+): Promise<PickedMedia[] | null> {
+  const limit = options.single ? 1 : Math.max(1, Math.min(options.limit ?? CAROUSEL_MAX, CAROUSEL_MAX));
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images', 'videos'],
     quality: 1,
     preferredAssetRepresentationMode: COMPATIBLE,
     videoMaxDuration: VIDEO_MAX_SECONDS,
-    allowsMultipleSelection: !options.single,
-    selectionLimit: options.single ? 1 : CAROUSEL_MAX,
+    allowsMultipleSelection: limit > 1,
+    selectionLimit: limit,
     orderedSelection: true,
   });
   if (result.canceled || result.assets.length === 0) return null;
-  const assets = result.assets.slice(0, CAROUSEL_MAX);
+  const assets = result.assets.slice(0, limit);
   if (assets.length > 1 && assets.some(isVideo)) {
     throw new Error(`Post a video on its own, or pick up to ${CAROUSEL_MAX} photos for a carousel.`);
   }
