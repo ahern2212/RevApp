@@ -15,6 +15,7 @@ import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
 import { type Car, carTitle, fetchCars } from '@/lib/cars';
 import { showError } from '@/lib/confirm';
+import { type CarEvent, fetchTaggableEvents } from '@/lib/events';
 import { useTabBarSpace } from '@/lib/layout';
 import { type PickedMedia, pickPostMedia } from '@/lib/media';
 import { CAROUSEL_MAX, formatDuration, VIDEO_MAX_SECONDS } from '@/lib/mediaRules';
@@ -28,6 +29,8 @@ export default function PostScreen() {
   const userId = user?.id;
   const [myCars, setMyCars] = useState<Car[]>([]);
   const [carId, setCarId] = useState<string | null>(null);
+  const [meets, setMeets] = useState<CarEvent[]>([]);
+  const [eventId, setEventId] = useState<string | null>(null);
   const router = useRouter();
   // One video, or 1–10 photos.
   const [media, setMedia] = useState<PickedMedia[] | null>(null);
@@ -48,6 +51,9 @@ export default function PostScreen() {
       fetchCars(userId)
         .then((cars) => !cancelled && setMyCars(cars))
         .catch((error) => console.warn('Failed to load your garage', error));
+      fetchTaggableEvents(userId)
+        .then((events) => !cancelled && setMeets(events))
+        .catch((error) => console.warn('Failed to load your meets', error));
       return () => {
         cancelled = true;
       };
@@ -80,10 +86,11 @@ export default function PostScreen() {
     if (!media) return;
     setBusy(true);
     try {
-      await addPost({ media, caption, car: formatCar(car), carId });
+      await addPost({ media, caption, car: formatCar(car), carId, eventId });
       setMedia(null);
       setCar(EMPTY_CAR);
       setCarId(null);
+      setEventId(null);
       setCaption('');
       router.replace('/');
     } catch (error) {
@@ -157,6 +164,22 @@ export default function PostScreen() {
                   icon="car-sport-outline"
                   active={carId === mine.id}
                   onPress={() => tagCar(mine)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {meets.length > 0 ? (
+          <View style={styles.tagBlock}>
+            <Text style={styles.tagLabel}>At a meet?</Text>
+            <View style={styles.tagChips}>
+              {meets.map((meet) => (
+                <Chip
+                  key={meet.id}
+                  label={meet.title}
+                  icon="location-outline"
+                  active={eventId === meet.id}
+                  onPress={() => setEventId(eventId === meet.id ? null : meet.id)}
                 />
               ))}
             </View>

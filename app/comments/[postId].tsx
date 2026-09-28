@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { MediaCarousel } from '@/components/MediaCarousel';
+import { MeetTag } from '@/components/MeetTag';
 import { MentionSuggestions, useMentions } from '@/components/MentionSuggestions';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostVideo } from '@/components/PostVideo';
@@ -362,6 +363,7 @@ export default function CommentsScreen() {
                 ) : null}
               </View>
               ) : null}
+              {post.eventId ? <MeetTag eventId={post.eventId} /> : null}
               <CommentRow
                 name={post.authorName}
                 userId={post.authorId}

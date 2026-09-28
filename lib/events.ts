@@ -47,6 +47,25 @@ function toEvent(row: EventRow): CarEvent {
   };
 }
 
+// Matches the meet-photos rule: a meet can be tagged from 2 days before it starts to a day after.
+const TAG_BEFORE_MS = 2 * 24 * 60 * 60 * 1000;
+const TAG_AFTER_MS = 24 * 60 * 60 * 1000;
+
+/** Meets you're hosting or going to that you can tag a post with right now. */
+export async function fetchTaggableEvents(userId: string): Promise<CarEvent[]> {
+  const now = Date.now();
+  const { data, error } = await supabase
+    .from('events')
+    .select(EVENT_SELECT)
+    .gte('starts_at', new Date(now - TAG_AFTER_MS).toISOString())
+    .lte('starts_at', new Date(now + TAG_BEFORE_MS).toISOString())
+    .order('starts_at', { ascending: true });
+  if (error) throw error;
+  return (data as unknown as EventRow[])
+    .map(toEvent)
+    .filter((event) => event.hostId === userId || event.goingIds.includes(userId));
+}
+
 /** Upcoming (and in-progress) events, soonest first. */
 export async function fetchUpcomingEvents(): Promise<CarEvent[]> {
   const { data, error } = await supabase

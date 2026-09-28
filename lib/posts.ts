@@ -18,6 +18,7 @@ export type PostRow = {
   video_path?: string | null;
   extra_image_paths?: string[] | null;
   car_id?: string | null;
+  event_id?: string | null;
   car: string;
   caption: string;
   created_at: string;
@@ -42,6 +43,7 @@ export function toPost(row: PostRow): Post {
       ? supabase.storage.from(VIDEO_BUCKET).getPublicUrl(row.video_path).data.publicUrl
       : null,
     carId: row.car_id ?? null,
+    eventId: row.event_id ?? null,
     caption: row.caption,
     car: row.car,
     createdAt: Date.parse(row.created_at),
@@ -100,6 +102,20 @@ export async function fetchCarPosts(carId: string): Promise<Post[]> {
     .from('posts')
     .select(POST_SELECT)
     .eq('car_id', carId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (error.code === '42703') return [];
+    throw error;
+  }
+  return (data as unknown as PostRow[]).map(toPost);
+}
+
+/** Posts tagged with a car meet, newest first ([] before the meet-photos migration). */
+export async function fetchEventPosts(eventId: string): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('event_id', eventId)
     .order('created_at', { ascending: false });
   if (error) {
     if (error.code === '42703') return [];

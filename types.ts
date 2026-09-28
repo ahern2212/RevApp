@@ -18,6 +18,8 @@ export type Post = {
   videoUri: string | null;
   /** The garage car tagged in this post, if any. */
   carId: string | null;
+  /** The car meet tagged in this post, if any. */
+  eventId: string | null;
   caption: string;
   car: string;
   createdAt: number;

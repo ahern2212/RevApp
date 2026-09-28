@@ -591,3 +591,30 @@ test('reporting a story hides it for you, and 3 reports expire it', async () => 
   await as(third, () => q(`insert into reports (story_id, reason) values ($1, 'Spam')`, [row.id]));
   assert.equal(await count(`select count(*) as n from stories where id = $1 and expires_at <= now()`, [row.id]), 1);
 });
+
+test('meet photos: only meets you host or go to, around when they happen', async () => {
+  const { alice, bob } = users;
+  const meet = async (hostId: string, startsIn: string) => {
+    const [row] = await as(hostId, () =>
+      q(
+        `insert into events (title, starts_at, location_name, latitude, longitude)
+         values ('Cars & Coffee', now() + $1::interval, 'Lot 5', 38.5, -121.5) returning id`,
+        [startsIn]
+      )
+    );
+    return row.id as string;
+  };
+  const tonight = await meet(bob, '3 hours');
+  const lastMonth = await q(
+    `insert into events (host_id, title, starts_at, location_name, latitude, longitude)
+     values ($1, 'Old meet', now() - interval '30 days', 'Lot 5', 38.5, -121.5) returning id`,
+    [bob]
+  );
+
+  assert.ok(await post(bob, { event_id: tonight }), 'the host can tag their meet');
+  assert.ok(await fails(() => post(alice, { event_id: tonight })), 'not going yet');
+  await as(alice, () => q(`insert into event_rsvps (event_id) values ($1)`, [tonight]));
+  assert.ok(await post(alice, { event_id: tonight }), 'going now');
+  assert.ok(await fails(() => post(bob, { event_id: lastMonth[0].id })), 'too long after the meet');
+  assert.equal(await count(`select count(*) as n from posts where event_id = $1`, [tonight]), 2);
+});

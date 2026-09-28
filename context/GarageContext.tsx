@@ -19,7 +19,13 @@ import { type UploadedMedia, uploadMedia } from '@/lib/uploads';
 import type { Post, User } from '@/types';
 
 /** media: one video, or 1–10 photos (a carousel when there's more than one). */
-type NewPost = { media: PickedMedia[]; caption: string; car: string; carId?: string | null };
+type NewPost = {
+  media: PickedMedia[];
+  caption: string;
+  car: string;
+  carId?: string | null;
+  eventId?: string | null;
+};
 
 
 type GarageContextValue = {
@@ -195,6 +201,7 @@ export function GarageProvider({ children }: { children: ReactNode }) {
           caption: input.caption.trim(),
           ...(main.videoPath ? { video_path: main.videoPath } : {}),
           ...(input.carId ? { car_id: input.carId } : {}),
+          ...(input.eventId ? { event_id: input.eventId } : {}),
           ...(extraPaths.length ? { extra_image_paths: extraPaths } : {}),
         };
         const { data, error } = await supabase.from('posts').insert(row).select(POST_SELECT).single();
