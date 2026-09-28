@@ -618,3 +618,20 @@ test('meet photos: only meets you host or go to, around when they happen', async
   assert.ok(await fails(() => post(bob, { event_id: lastMonth[0].id })), 'too long after the meet');
   assert.equal(await count(`select count(*) as n from posts where event_id = $1`, [tonight]), 2);
 });
+
+test('unsending the latest message updates the inbox preview', async () => {
+  const { alice, bob } = users;
+  const [{ start_conversation: chat }] = await as(alice, () => q(`select start_conversation($1)`, [bob]));
+  await as(alice, () => q(`insert into messages (conversation_id, body) values ($1, 'first')`, [chat]));
+  const [second] = await as(alice, () =>
+    q(`insert into messages (conversation_id, body) values ($1, 'oops wrong chat') returning id`, [chat])
+  );
+  await as(alice, () => q(`delete from messages where id = $1`, [second.id]));
+  const [conv] = await as(bob, () => q(`select last_message from conversations where id = $1`, [chat]));
+  assert.equal(conv.last_message, 'first');
+
+  await as(alice, () => q(`delete from messages where conversation_id = $1`, [chat]));
+  const [empty] = await as(bob, () => q(`select last_message, last_message_at from conversations where id = $1`, [chat]));
+  assert.equal(empty.last_message, '');
+  assert.equal(empty.last_message_at, null, 'an empty chat drops out of the inbox');
+});
