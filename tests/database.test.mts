@@ -635,3 +635,25 @@ test('unsending the latest message updates the inbox preview', async () => {
   assert.equal(empty.last_message, '');
   assert.equal(empty.last_message_at, null, 'an empty chat drops out of the inbox');
 });
+
+test('featured photos for the sign-in screen: curated first, then top posts, no authors', async () => {
+  const { alice, dave } = users;
+  await q(`insert into featured_cars (image_url, title, position) values ('https://example.com/supra.jpg', 'Supra', 1)`);
+  await q(`insert into featured_cars (image_url, title, active) values ('https://example.com/old.jpg', 'Old', false)`);
+  assert.ok(await fails(() => q(`insert into featured_cars (image_url) values ('http://insecure.example.com/x.jpg')`)));
+  const liked = await post(alice, { car: '2002 Honda S2000' });
+  await as(dave, () => q(`insert into likes (post_id) values ($1)`, [liked]));
+
+  // Signed out: the anon role can call the function but can't read the tables directly.
+  await db.exec(`set role anon`);
+  try {
+    const rows = await q(`select * from featured_photos()`);
+    assert.equal(rows[0].image_url, 'https://example.com/supra.jpg');
+    assert.ok(rows.every((row) => row.title !== 'Old'), 'inactive picks are skipped');
+    assert.ok(rows.some((row) => row.title === '2002 Honda S2000'), 'liked community posts follow');
+    assert.deepEqual(Object.keys(rows[0]).sort(), ['image_path', 'image_url', 'title']);
+    assert.equal((await q(`select * from featured_cars`)).length, 0, 'the table itself is hidden');
+  } finally {
+    await db.exec(`reset role`);
+  }
+});

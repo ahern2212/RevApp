@@ -4,6 +4,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 
 ## Features
 
+- **Featured cars on sign-in** — a slowly zooming, crossfading slideshow behind the sign-in form: your picks from the `featured_cars` table (add rows in the Supabase dashboard), then the community's most-liked photos of the last 60 days (photo and car name only, no usernames)
 - **Accounts** — email + password sign-up/sign-in; sessions persist until you sign out; delete your account (and everything in it) from Edit profile
 - **Feed** — newest posts first, loads more as you scroll, pull to refresh or tap the refresh button (the only way on the web); the retro banner header slides away as you scroll down and returns when you scroll up; an Everyone / Following switch and a "Car of the week" card (most-liked post of the last 7 days) sit at the top; tap the Feed tab to jump to the top; a "new posts" pill appears when others post
 - **Stories** — a photo or video that disappears after 24 hours; the tray at the top of the feed shows yours (tap + to add) and the people you follow, unseen first; the full-screen viewer has progress bars, tap left/right, auto-advance, "Seen by" and delete for your own, and report/block for everyone else's
