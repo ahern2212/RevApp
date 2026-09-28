@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react';
-import { type GestureResponderEvent, Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import type { ComponentProps, ReactNode } from 'react';
+import { type GestureResponderEvent, Pressable, type PressableProps } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const SPRING = { damping: 15, stiffness: 320, mass: 0.6 };
 
 type Props = Omit<PressableProps, 'style' | 'children'> & {
-  style?: StyleProp<ViewStyle>;
+  /** Any style an Animated.View takes, including Reanimated CSS transitions. */
+  style?: ComponentProps<typeof Animated.View>['style'];
   children?: ReactNode;
   /** How far it shrinks while pressed (1 = not at all). */
   scaleTo?: number;
