@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { atTime, dayLabel, nextDays, parseTime } from '../lib/datetime.ts';
+import { atTime, dayLabel, meetPhase, nextDays, parseTime } from '../lib/datetime.ts';
 
 test('parseTime understands 12h and 24h formats', () => {
   assert.deepEqual(parseTime('7pm'), { hours: 19, minutes: 0 });
@@ -36,4 +36,14 @@ test('dayLabel names today and tomorrow', () => {
 
 test('atTime combines day and time', () => {
   assert.deepEqual(atTime(new Date(2026, 9, 3), { hours: 19, minutes: 30 }), new Date(2026, 9, 3, 19, 30));
+});
+
+test('meetPhase: upcoming, live for 6 hours, then ended', () => {
+  const now = Date.UTC(2026, 8, 27, 18, 0);
+  const hour = 60 * 60 * 1000;
+  assert.equal(meetPhase(now + hour, now), 'upcoming');
+  assert.equal(meetPhase(now, now), 'live');
+  assert.equal(meetPhase(now - 5 * hour, now), 'live');
+  assert.equal(meetPhase(now - 6 * hour, now), 'ended');
+  assert.equal(meetPhase(now - 30 * 24 * hour, now), 'ended');
 });

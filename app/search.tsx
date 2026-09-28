@@ -10,9 +10,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
 import { Chip } from '@/components/Chip';
+import { PressableScale } from '@/components/PressableScale';
 import { PostGrid } from '@/components/PostGrid';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
@@ -148,11 +150,14 @@ export default function SearchScreen() {
             <View style={styles.section}>
               <Text style={styles.heading}>Drivers to follow</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestions}>
-                {suggested.map((driver) => {
+                {suggested.map((driver, index) => {
                   const isFollowing = followed.has(driver.id);
                   return (
-                    <Pressable
+                    <Animated.View
                       key={driver.id}
+                      entering={FadeInRight.delay(Math.min(index, 6) * 60).springify().damping(16)}>
+                    <PressableScale
+                      scaleTo={0.96}
                       onPress={() =>
                         router.push({
                           pathname: '/user/[userId]',
@@ -180,7 +185,8 @@ export default function SearchScreen() {
                           {isFollowing ? 'Following' : 'Follow'}
                         </Text>
                       </Pressable>
-                    </Pressable>
+                    </PressableScale>
+                    </Animated.View>
                   );
                 })}
               </ScrollView>

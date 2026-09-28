@@ -21,6 +21,7 @@ import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
 import { confirm, showError } from '@/lib/confirm';
+import { meetPhase } from '@/lib/datetime';
 import { type CarEvent, deleteEvent, fetchEvent, formatEventTime, setGoing } from '@/lib/events';
 import { directionsUrl } from '@/lib/geo';
 import { fetchEventPosts } from '@/lib/posts';
@@ -90,7 +91,8 @@ export default function EventScreen() {
   const userId = user?.id;
   const going = !!userId && event.goingIds.includes(userId);
   const isHost = userId === event.hostId;
-  const past = event.startsAt < now;
+  const phase = meetPhase(event.startsAt, now);
+  const ended = phase === 'ended';
 
   const openProfile = (id: string, name?: string) =>
     router.push({ pathname: '/user/[userId]', params: name ? { userId: id, name } : { userId: id } });
@@ -153,7 +155,7 @@ export default function EventScreen() {
         <Ionicons name="calendar-outline" size={18} color={Colors.light.tint} />
         <Text style={styles.info}>
           {formatEventTime(event.startsAt)}
-          {past ? ' · happening now' : ''}
+          {phase === 'live' ? ' · happening now' : ended ? ' · ended' : ''}
         </Text>
       </View>
       <View style={styles.infoRow}>
@@ -162,6 +164,15 @@ export default function EventScreen() {
       </View>
 
       <View style={styles.buttons}>
+        {ended ? (
+          <View style={[styles.goingButton, styles.endedBadge]}>
+            <Ionicons name="flag-outline" size={18} color={Colors.light.muted} />
+            <Text style={styles.endedText}>
+              {event.goingIds.length} {event.goingIds.length === 1 ? 'driver' : 'drivers'} went
+              {going ? ', including you' : ''}
+            </Text>
+          </View>
+        ) : (
         <Pressable
           onPress={toggleGoing}
           accessibilityRole="button"
@@ -176,6 +187,7 @@ export default function EventScreen() {
             {going ? 'You’re going' : 'I’m going'}
           </Text>
         </Pressable>
+        )}
         <Pressable onPress={directions} accessibilityRole="link" style={styles.directions}>
           <Ionicons name="navigate-outline" size={18} color={Colors.light.text} />
           <Text style={styles.directionsText}>Directions</Text>
@@ -235,6 +247,13 @@ export default function EventScreen() {
 }
 
 const styles = StyleSheet.create({
+  endedBadge: {
+    borderColor: Colors.light.border,
+  },
+  endedText: {
+    color: Colors.light.muted,
+    fontWeight: '700',
+  },
   photos: {
     gap: 8,
     marginTop: 12,

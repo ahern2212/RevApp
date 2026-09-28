@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -115,7 +116,7 @@ export function PostCard({
   };
 
   return (
-    <View style={styles.card}>
+    <Animated.View entering={FadeInDown.duration(350)} style={styles.card}>
       <View style={styles.header}>
         <Pressable
           onPress={onAuthorPress}
@@ -255,7 +256,7 @@ export function PostCard({
           </Text>
         </Pressable>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 

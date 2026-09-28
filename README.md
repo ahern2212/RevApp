@@ -5,7 +5,7 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 ## Features
 
 - **Accounts** — email + password sign-up/sign-in; sessions persist until you sign out; delete your account (and everything in it) from Edit profile
-- **Feed** — newest posts first, loads more as you scroll, pull to refresh; the retro banner header slides away as you scroll down and returns when you scroll up; an Everyone / Following switch and a "Car of the week" card (most-liked post of the last 7 days) sit at the top; tap the Feed tab to jump to the top; a "new posts" pill appears when others post
+- **Feed** — newest posts first, loads more as you scroll, pull to refresh or tap the refresh button (the only way on the web); the retro banner header slides away as you scroll down and returns when you scroll up; an Everyone / Following switch and a "Car of the week" card (most-liked post of the last 7 days) sit at the top; tap the Feed tab to jump to the top; a "new posts" pill appears when others post
 - **Stories** — a photo or video that disappears after 24 hours; the tray at the top of the feed shows yours (tap + to add) and the people you follow, unseen first; the full-screen viewer has progress bars, tap left/right, auto-advance, "Seen by" and delete for your own, and report/block for everyone else's
 - **Posts** — up to 10 photos (a swipeable carousel with page dots; arrows on desktop web) or one video (up to 60 seconds) + car (year/make/model suggestions from NHTSA) + caption; "…" menu on your own posts to edit the caption or delete
 - **Videos** — play muted and loop when they scroll into view, like Instagram; tap for sound (it stays on for the next video), double-tap to like; grids show a play icon; the post page has full playback controls
@@ -31,7 +31,8 @@ Instagram-style app for cars. One Expo codebase runs as a website, an iPhone app
 - **About** — story, features, community guidelines and a feedback shortcut
 - **App colors** — five full palettes previewed live; voting for one also switches your device to it (the app restarts to repaint). The app-wide default is `DEFAULT_THEME_ID` in `constants/Colors.ts`
 - **Glass UI** — frosted translucent cards over soft theme-colored glows; real blur on the tab bar, notification banner and menus
-- **Events** — car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions, and see photos of the garage cars of everyone going; tag a post with a meet you're hosting or going to ("At a meet?" on the Post tab, from 2 days before to a day after) and it shows in the meet's "Photos from the meet" gallery
+- **Motion** — buttons spring when pressed, cards and list rows fade up as they appear, chips and the Follow button ease between states, menus spring up, unseen story rings pulse, and the refresh arrow spins (Reanimated layout animations and CSS transitions/keyframes, which respect the system Reduce Motion setting)
+- **Events** — Upcoming and Past tabs (past meets show who went and their photos); car meets on a map (OpenStreetMap tiles, no API key): host a meet with a searchable location, RSVP "going", get directions, and see photos of the garage cars of everyone going; tag a post with a meet you're hosting or going to ("At a meet?" on the Post tab, from 2 days before to a day after) and it shows in the meet's "Photos from the meet" gallery
 
 ## Project layout
 

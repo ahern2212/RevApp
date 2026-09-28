@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
 import { Avatar } from '@/components/Avatar';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import Colors from '@/constants/Colors';
@@ -85,7 +87,8 @@ export default function ActivityScreen() {
           </View>
         )
       }
-      renderItem={({ item }) => (
+      renderItem={({ item, index }) => (
+        <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40).duration(300)}>
         <Pressable
           onPress={() =>
             item.postId
@@ -125,6 +128,7 @@ export default function ActivityScreen() {
             <Image source={{ uri: item.postImageUri }} style={styles.thumb} contentFit="cover" />
           ) : null}
         </Pressable>
+        </Animated.View>
       )}
     />
     </View>

@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
@@ -64,6 +65,8 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [menu, setMenu] = useState<SheetOption[] | null>(null);
+  // Only messages that arrive while the chat is open animate in.
+  const [openedAt] = useState(() => Date.now());
   const partnerName = chat?.partnerName ?? name ?? 'Chat';
 
   const markRead = useCallback(() => {
@@ -235,7 +238,7 @@ export default function ChatScreen() {
             // Inverted list: the next item in the array is the older message.
             const older = messages[index + 1];
             return (
-              <View>
+              <Animated.View entering={item.createdAt > openedAt ? FadeInDown.springify().damping(18) : undefined}>
                 {showTimeAbove(older?.createdAt ?? null, item.createdAt) ? (
                   <Text style={styles.stamp}>{formatStamp(item.createdAt)}</Text>
                 ) : null}
@@ -255,7 +258,7 @@ export default function ChatScreen() {
                     <Text style={styles.gone}>Shared post was deleted</Text>
                   ) : null}
                 </Pressable>
-              </View>
+              </Animated.View>
             );
           }}
         />

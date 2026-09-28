@@ -27,6 +27,7 @@ import { FeedHeader, useFeedHeaderHeight } from '@/components/FeedHeader';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { PostCard } from '@/components/PostCard';
+import { RefreshButton } from '@/components/RefreshButton';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
 import { StoryTray } from '@/components/StoryTray';
 import Colors from '@/constants/Colors';
@@ -291,6 +292,8 @@ export default function FeedScreen() {
                 active={feedMode === 'following'}
                 onPress={() => setFeedMode('following')}
               />
+              <View style={styles.modesSpacer} />
+              <RefreshButton refreshing={refreshing} onPress={showNewPosts} />
             </View>
             {feedMode === 'all' && topPost ? (
               <CarOfTheWeek
@@ -452,10 +455,14 @@ const styles = StyleSheet.create({
   },
   modes: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 12,
+  },
+  modesSpacer: {
+    flex: 1,
   },
   emptyBox: {
     alignItems: 'center',

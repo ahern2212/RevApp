@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
+import { PressableScale } from '@/components/PressableScale';
 import Colors from '@/constants/Colors';
 import { useGarage } from '@/context/GarageContext';
 import { showError } from '@/lib/confirm';
@@ -22,6 +24,7 @@ function Bubble({
   label,
   onPress,
   badge,
+  index,
 }: {
   name: string;
   userId?: string;
@@ -29,17 +32,26 @@ function Bubble({
   label: string;
   onPress: () => void;
   badge?: ReactNode;
+  /** Position in the row, for the staggered entrance. */
+  index: number;
 }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={styles.bubble}>
-      <View style={[styles.ring, unseen ? styles.ringUnseen : styles.ringSeen]}>
-        <Avatar name={name} userId={userId} size={RING - 8} />
-      </View>
-      {badge}
-      <Text style={styles.name} numberOfLines={1}>
-        {name}
-      </Text>
-    </Pressable>
+    <Animated.View entering={FadeInRight.delay(Math.min(index, 8) * 60).springify().damping(16)}>
+      <PressableScale
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        scaleTo={0.9}
+        style={styles.bubble}>
+        <Animated.View style={[styles.ring, unseen ? styles.ringUnseen : styles.ringSeen]}>
+          <Avatar name={name} userId={userId} size={RING - 8} />
+        </Animated.View>
+        {badge}
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
+        </Text>
+      </PressableScale>
+    </Animated.View>
   );
 }
 
@@ -123,10 +135,12 @@ export function StoryTray({ refreshSignal }: { refreshSignal: number }) {
         label={mine ? 'View your story' : 'Add to your story'}
         onPress={mine ? () => openStories(mine) : addStory}
         badge={addBadge}
+        index={0}
       />
-      {others.map((item) => (
+      {others.map((item, i) => (
         <Bubble
           key={item.authorId}
+          index={i + 1}
           name={item.username}
           userId={item.authorId}
           unseen={item.unseen > 0}
@@ -157,8 +171,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Unseen stories get a ring that gently pulses (a Reanimated CSS keyframe animation).
   ringUnseen: {
     borderColor: Colors.light.tint,
+    animationName: {
+      '0%': { transform: [{ scale: 1 }] },
+      '50%': { transform: [{ scale: 1.05 }] },
+      '100%': { transform: [{ scale: 1 }] },
+    },
+    animationDuration: 1800,
+    animationIterationCount: 'infinite',
+    animationTimingFunction: 'ease-in-out',
   },
   ringSeen: {
     borderColor: Colors.light.border,

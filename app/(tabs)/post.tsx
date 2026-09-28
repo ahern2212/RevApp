@@ -10,6 +10,7 @@ import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { MediaCarousel } from '@/components/MediaCarousel';
 import { MentionSuggestions, useMentions } from '@/components/MentionSuggestions';
 import { PostVideo } from '@/components/PostVideo';
+import { PressableScale } from '@/components/PressableScale';
 import Colors from '@/constants/Colors';
 import { glass } from '@/constants/glass';
 import { useGarage } from '@/context/GarageContext';
@@ -208,7 +209,7 @@ export default function PostScreen() {
             {caption.length}/{CAPTION_MAX}
           </Text>
         ) : null}
-        <Pressable
+        <PressableScale
           style={[styles.button, !canShare && styles.buttonDisabled]}
           disabled={!canShare}
           onPress={share}
@@ -217,7 +218,7 @@ export default function PostScreen() {
           <Text style={styles.buttonText}>
             {busy ? (isVideo ? 'Uploading video…' : 'Sharing…') : 'Share'}
           </Text>
-        </Pressable>
+        </PressableScale>
         {!media ? (
           <Text style={styles.hint}>
             Photos are cleaned before upload: location and camera details are removed.

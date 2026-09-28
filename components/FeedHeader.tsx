@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
+import { PressableScale } from '@/components/PressableScale';
 import Colors, { art } from '@/constants/Colors';
 import { useActivity } from '@/context/ActivityContext';
 import { useMessages } from '@/context/MessagesContext';
@@ -150,48 +151,48 @@ export function FeedHeader() {
           </Text>
         </View>
         <View style={styles.buttons}>
-          <Pressable
+          <PressableScale
             onPress={() => router.push('/search')}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="Search"
-            style={({ pressed }) => [styles.action, styles.actionLight, pressed && styles.actionPressed]}>
+            style={[styles.action, styles.actionLight]}>
             <Ionicons name="search" size={20} color={Colors.light.tint} />
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale
             onPress={() => router.push('/activity')}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={unread > 0 ? `Activity, ${unread} new` : 'Activity'}
-            style={({ pressed }) => [styles.action, styles.actionLight, pressed && styles.actionPressed]}>
+            style={[styles.action, styles.actionLight]}>
             <Ionicons name="heart-outline" size={22} color={Colors.light.tint} />
             {unread > 0 ? (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
               </View>
             ) : null}
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale
             onPress={() => router.push('/inbox')}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={unreadChats > 0 ? `Messages, ${unreadChats} unread` : 'Messages'}
-            style={({ pressed }) => [styles.action, styles.actionLight, pressed && styles.actionPressed]}>
+            style={[styles.action, styles.actionLight]}>
             <Ionicons name="paper-plane-outline" size={20} color={Colors.light.tint} />
             {unreadChats > 0 ? (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unreadChats > 9 ? '9+' : unreadChats}</Text>
               </View>
             ) : null}
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale
             onPress={() => router.push('/post')}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel="New post"
-            style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}>
+            style={styles.action}>
             <Ionicons name="add" size={24} color={Colors.light.onTint} />
-          </Pressable>
+          </PressableScale>
         </View>
       </View>
     </View>
@@ -268,8 +269,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 10,
     fontWeight: '800',
-  },
-  actionPressed: {
-    opacity: 0.7,
   },
 });

@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import Colors from '@/constants/Colors';
 import type { Post } from '@/types';
@@ -11,7 +12,7 @@ type Props = {
   emptyText: string;
 };
 
-/** Three-column photo grid; tapping a photo opens the post with its comments. */
+/** Three-column photo grid; tapping a photo opens the post with its comments. Tiles fade in. */
 export function PostGrid({ posts, emptyText }: Props) {
   const router = useRouter();
 
@@ -21,25 +22,29 @@ export function PostGrid({ posts, emptyText }: Props) {
 
   return (
     <View style={styles.grid}>
-      {posts.map((post) => (
-        <Pressable
+      {posts.map((post, index) => (
+        <Animated.View
           key={post.id}
-          onPress={() =>
-            router.push({ pathname: '/comments/[postId]', params: { postId: post.id } })
-          }
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${post.videoUri ? 'video' : 'post'}${post.car ? `: ${post.car}` : ''}`}
-          style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
-          <Image
-            source={{ uri: post.imageUri }}
-            style={styles.image}
-            contentFit="cover"
-            transition={150}
-          />
-          {post.videoUri || post.imageUris.length > 1 ? (
-            <Ionicons name={post.videoUri ? 'play' : 'copy'} size={16} color="#ffffff" style={styles.videoIcon} />
-          ) : null}
-        </Pressable>
+          entering={FadeIn.delay(Math.min(index, 11) * 35).duration(300)}
+          style={styles.tile}>
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/comments/[postId]', params: { postId: post.id } })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${post.videoUri ? 'video' : 'post'}${post.car ? `: ${post.car}` : ''}`}
+            style={({ pressed }) => [styles.fill, pressed && styles.pressed]}>
+            <Image
+              source={{ uri: post.imageUri }}
+              style={styles.fill}
+              contentFit="cover"
+              transition={150}
+            />
+            {post.videoUri || post.imageUris.length > 1 ? (
+              <Ionicons name={post.videoUri ? 'play' : 'copy'} size={16} color="#ffffff" style={styles.videoIcon} />
+            ) : null}
+          </Pressable>
+        </Animated.View>
       ))}
     </View>
   );
@@ -59,7 +64,7 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.8,
   },
-  image: {
+  fill: {
     width: '100%',
     height: '100%',
   },
