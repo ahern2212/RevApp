@@ -19,6 +19,8 @@ export type PostRow = {
   extra_image_paths?: string[] | null;
   car_id?: string | null;
   event_id?: string | null;
+  layout?: string | null;
+  has_poll?: boolean | null;
   car: string;
   caption: string;
   created_at: string;
@@ -38,6 +40,8 @@ export function toPost(row: PostRow): Post {
     imageUri: imageUrl(row.image_path),
     extraImagePaths,
     imageUris: [row.image_path, ...extraImagePaths].map(imageUrl),
+    layout: row.layout === 'grid' ? 'grid' : 'carousel',
+    hasPoll: row.has_poll ?? false,
     videoPath: row.video_path ?? null,
     videoUri: row.video_path
       ? supabase.storage.from(VIDEO_BUCKET).getPublicUrl(row.video_path).data.publicUrl

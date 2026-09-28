@@ -14,6 +14,8 @@ import Animated, {
 
 import { Avatar } from '@/components/Avatar';
 import { MediaCarousel } from '@/components/MediaCarousel';
+import { MediaGrid } from '@/components/MediaGrid';
+import { PollCard } from '@/components/PollCard';
 import { PostVideo } from '@/components/PostVideo';
 import { RichText } from '@/components/RichText';
 import Colors from '@/constants/Colors';
@@ -161,6 +163,8 @@ export function PostCard({
         accessibilityHint={post.videoUri ? 'Tap for sound. Double-tap to like' : 'Double-tap to like'}>
         {post.videoUri ? (
           <PostVideo uri={post.videoUri} posterUri={post.imageUri} active={active} style={styles.photo} />
+        ) : post.imageUris.length > 1 && post.layout === 'grid' ? (
+          <MediaGrid uris={post.imageUris} style={styles.photo} />
         ) : post.imageUris.length > 1 ? (
           <MediaCarousel uris={post.imageUris} style={styles.photo} />
         ) : (
@@ -175,6 +179,8 @@ export function PostCard({
           <Ionicons name="heart" size={96} color="#ffffff" style={styles.burstIcon} />
         </Animated.View>
       </Pressable>
+
+      {post.hasPoll ? <PollCard postId={post.id} authorId={post.authorId} /> : null}
 
       <View style={styles.actions}>
         <Pressable

@@ -8,6 +8,7 @@ import { CarDetailsInput } from '@/components/CarDetailsInput';
 import { Chip } from '@/components/Chip';
 import { GlassBackdrop } from '@/components/GlassBackdrop';
 import { MediaCarousel } from '@/components/MediaCarousel';
+import { MediaGrid } from '@/components/MediaGrid';
 import { MentionSuggestions, useMentions } from '@/components/MentionSuggestions';
 import { PostVideo } from '@/components/PostVideo';
 import { PressableScale } from '@/components/PressableScale';
@@ -17,9 +18,11 @@ import { useGarage } from '@/context/GarageContext';
 import { type Car, carTitle, fetchCars } from '@/lib/cars';
 import { showError } from '@/lib/confirm';
 import { type CarEvent, fetchTaggableEvents } from '@/lib/events';
+import { GRID_MAX, GRID_MIN } from '@/lib/gridLayout';
 import { useTabBarSpace } from '@/lib/layout';
 import { type PickedMedia, pickPostMedia } from '@/lib/media';
 import { CAROUSEL_MAX, formatDuration, VIDEO_MAX_SECONDS } from '@/lib/mediaRules';
+import { checkPoll, cleanPoll, POLL_MAX_OPTIONS, POLL_OPTION_MAX, POLL_QUESTION_MAX } from '@/lib/pollRules';
 import { type CarDetails, formatCar } from '@/lib/vehicles';
 
 const EMPTY_CAR: CarDetails = { year: '', make: '', model: '' };
@@ -41,7 +44,15 @@ export default function PostScreen() {
   const [caption, setCaption] = useState('');
   const mentions = useMentions(caption, setCaption);
   const [busy, setBusy] = useState(false);
+  const [layout, setLayout] = useState<'carousel' | 'grid'>('carousel');
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const tabBarSpace = useTabBarSpace();
+  // 2–6 photos (no video) can be shown as a grid instead of a carousel.
+  const photoCount = media && media.every((item) => item.kind === 'image') ? media.length : 0;
+  const canGrid = photoCount >= GRID_MIN && photoCount <= GRID_MAX;
+  const shownLayout = canGrid ? layout : 'carousel';
   const canShare = !!media && !busy && !preparing;
 
   // Your garage, reloaded each visit so a car added a moment ago can be tagged.
@@ -85,14 +96,34 @@ export default function PostScreen() {
 
   const share = async () => {
     if (!media) return;
+    const pollDraft = { question: pollQuestion, options: pollOptions };
+    if (pollOpen) {
+      const problem = checkPoll(pollDraft);
+      if (problem) {
+        showError('Check your poll', new Error(problem));
+        return;
+      }
+    }
     setBusy(true);
     try {
-      await addPost({ media, caption, car: formatCar(car), carId, eventId });
+      await addPost({
+        media,
+        caption,
+        car: formatCar(car),
+        carId,
+        eventId,
+        layout: shownLayout,
+        poll: pollOpen ? cleanPoll(pollDraft) : null,
+      });
       setMedia(null);
       setCar(EMPTY_CAR);
       setCarId(null);
       setEventId(null);
       setCaption('');
+      setLayout('carousel');
+      setPollOpen(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
       router.replace('/');
     } catch (error) {
       showError('Could not share', error);
@@ -124,6 +155,8 @@ export default function PostScreen() {
             <>
               {first.kind === 'video' && first.posterUri ? (
                 <PostVideo uri={first.uri} posterUri={first.posterUri} active style={styles.preview} />
+              ) : media.length > 1 && shownLayout === 'grid' ? (
+                <MediaGrid uris={media.map((item) => item.uri)} style={styles.preview} />
               ) : media.length > 1 ? (
                 <MediaCarousel uris={media.map((item) => item.uri)} style={styles.preview} />
               ) : (
@@ -154,6 +187,17 @@ export default function PostScreen() {
             </View>
           )}
         </Pressable>
+        {canGrid ? (
+          <View style={styles.tagChips} accessibilityRole="radiogroup">
+            <Chip
+              label="Carousel"
+              icon="copy-outline"
+              active={shownLayout === 'carousel'}
+              onPress={() => setLayout('carousel')}
+            />
+            <Chip label="Grid" icon="grid-outline" active={shownLayout === 'grid'} onPress={() => setLayout('grid')} />
+          </View>
+        ) : null}
         {myCars.length > 0 ? (
           <View style={styles.tagBlock}>
             <Text style={styles.tagLabel}>Tag a car from your garage</Text>
@@ -204,6 +248,64 @@ export default function PostScreen() {
           style={[styles.input, styles.caption]}
         />
         <MentionSuggestions suggestions={mentions.suggestions} onPick={mentions.pick} />
+        {pollOpen ? (
+          <View style={styles.pollBox}>
+            <View style={styles.pollHeader}>
+              <Ionicons name="stats-chart" size={16} color={Colors.light.tint} />
+              <Text style={styles.tagLabel}>Poll</Text>
+              <Text
+                style={styles.pollRemove}
+                onPress={() => setPollOpen(false)}
+                accessibilityRole="button">
+                Remove
+              </Text>
+            </View>
+            <TextInput
+              value={pollQuestion}
+              onChangeText={setPollQuestion}
+              placeholder="Ask something, e.g. Which wheels?"
+              placeholderTextColor={Colors.light.placeholder}
+              maxLength={POLL_QUESTION_MAX}
+              accessibilityLabel="Poll question"
+              style={styles.input}
+            />
+            {pollOptions.map((option, index) => (
+              <View key={index} style={styles.pollOptionRow}>
+                <TextInput
+                  value={option}
+                  onChangeText={(text) =>
+                    setPollOptions((current) => current.map((value, i) => (i === index ? text : value)))
+                  }
+                  placeholder={`Answer ${index + 1}`}
+                  placeholderTextColor={Colors.light.placeholder}
+                  maxLength={POLL_OPTION_MAX}
+                  accessibilityLabel={`Poll answer ${index + 1}`}
+                  style={[styles.input, styles.pollOptionInput]}
+                />
+                {index >= 2 ? (
+                  <Ionicons
+                    name="close-circle"
+                    size={22}
+                    color={Colors.light.muted}
+                    onPress={() => setPollOptions((current) => current.filter((_, i) => i !== index))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove answer ${index + 1}`}
+                  />
+                ) : null}
+              </View>
+            ))}
+            {pollOptions.length < POLL_MAX_OPTIONS ? (
+              <Text
+                style={styles.pollAdd}
+                onPress={() => setPollOptions((current) => [...current, ''])}
+                accessibilityRole="button">
+                + Add answer
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <Chip label="Add a poll" icon="stats-chart-outline" onPress={() => setPollOpen(true)} />
+        )}
         {caption.length > CAPTION_MAX - 200 ? (
           <Text style={styles.counter}>
             {caption.length}/{CAPTION_MAX}
@@ -324,6 +426,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  pollBox: {
+    gap: 8,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+  },
+  pollHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pollRemove: {
+    marginLeft: 'auto',
+    color: Colors.light.muted,
+    fontWeight: '700',
+  },
+  pollOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pollOptionInput: {
+    flex: 1,
+  },
+  pollAdd: {
+    color: Colors.light.tint,
+    fontWeight: '800',
+    paddingVertical: 4,
   },
   input: {
     ...glass,

@@ -18,9 +18,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { MediaCarousel } from '@/components/MediaCarousel';
+import { MediaGrid } from '@/components/MediaGrid';
 import { MeetTag } from '@/components/MeetTag';
 import { MentionSuggestions, useMentions } from '@/components/MentionSuggestions';
 import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
+import { PollCard } from '@/components/PollCard';
 import { PostVideo } from '@/components/PostVideo';
 import { RichText } from '@/components/RichText';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
@@ -322,6 +324,15 @@ export default function CommentsScreen() {
                   controls
                   style={[styles.photo, styles.video]}
                 />
+              ) : post.imageUris.length > 1 && post.layout === 'grid' ? (
+                <MediaGrid
+                  uris={post.imageUris}
+                  style={styles.photo}
+                  onPressTile={(index) => {
+                    setPhotoIndex(index);
+                    setViewerOpen(true);
+                  }}
+                />
               ) : (
                 <Pressable
                   onPress={() => setViewerOpen(true)}
@@ -362,6 +373,11 @@ export default function CommentsScreen() {
                   </Pressable>
                 ) : null}
               </View>
+              ) : null}
+              {post.hasPoll ? (
+                <View style={styles.poll}>
+                  <PollCard postId={post.id} authorId={post.authorId} />
+                </View>
               ) : null}
               {post.eventId ? <MeetTag eventId={post.eventId} /> : null}
               <CommentRow
@@ -507,6 +523,11 @@ const styles = StyleSheet.create({
   },
   video: {
     overflow: 'hidden',
+  },
+  poll: {
+    marginHorizontal: -14,
+    marginTop: -12,
+    marginBottom: 12,
   },
   carRow: {
     flexDirection: 'row',

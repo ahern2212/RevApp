@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from '@/context/AuthContext';
 import { isMissingFollows } from '@/lib/follows';
 import type { PickedMedia } from '@/lib/media';
+import type { PollDraft } from '@/lib/pollRules';
+import { createPoll } from '@/lib/polls';
 import {
   BUCKET,
   fetchFeedPage,
@@ -25,6 +27,10 @@ type NewPost = {
   car: string;
   carId?: string | null;
   eventId?: string | null;
+  /** Show several photos tiled in one frame instead of as a carousel. */
+  layout?: 'carousel' | 'grid';
+  /** Optional poll (already checked with checkPoll). */
+  poll?: PollDraft | null;
 };
 
 
@@ -203,15 +209,29 @@ export function GarageProvider({ children }: { children: ReactNode }) {
           ...(input.carId ? { car_id: input.carId } : {}),
           ...(input.eventId ? { event_id: input.eventId } : {}),
           ...(extraPaths.length ? { extra_image_paths: extraPaths } : {}),
+          ...(input.layout === 'grid' ? { layout: 'grid' } : {}),
         };
         const { data, error } = await supabase.from('posts').insert(row).select(POST_SELECT).single();
         if (error?.code === 'PGRST204' && extraPaths.length) {
-          throw new Error('Carousel posts need the latest database update. Share one photo for now.');
+          throw new Error(
+            input.layout === 'grid'
+              ? 'Grid posts need the latest database update. Try a carousel for now.'
+              : 'Carousel posts need the latest database update. Share one photo for now.'
+          );
         }
         if (error) throw error;
 
         const post = toPost(data as unknown as PostRow);
-        setPosts((current) => [post, ...current]);
+        if (input.poll) {
+          try {
+            await createPoll(post.id, input.poll);
+          } catch (pollError) {
+            // Don't leave a post behind without the poll it was meant to have.
+            await supabase.from('posts').delete().eq('id', post.id);
+            throw pollError;
+          }
+        }
+        setPosts((current) => [{ ...post, hasPoll: !!input.poll }, ...current]);
       } catch (error) {
         await Promise.all(uploads.map((upload) => upload.remove()));
         throw error;

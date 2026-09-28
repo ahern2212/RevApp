@@ -41,7 +41,12 @@ export function PostGrid({ posts, emptyText }: Props) {
               transition={150}
             />
             {post.videoUri || post.imageUris.length > 1 ? (
-              <Ionicons name={post.videoUri ? 'play' : 'copy'} size={16} color="#ffffff" style={styles.videoIcon} />
+              <Ionicons
+                name={post.videoUri ? 'play' : post.layout === 'grid' ? 'grid' : 'copy'}
+                size={16}
+                color="#ffffff"
+                style={styles.videoIcon}
+              />
             ) : null}
           </Pressable>
         </Animated.View>
