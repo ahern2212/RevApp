@@ -35,7 +35,7 @@ export function Avatar({ name, userId, size = 36, uri, style }: Props) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants">
       {imageUri ? (
-        <Image source={{ uri: imageUri }} style={circle} contentFit="cover" transition={150} />
+        <Image source={{ uri: imageUri }} placeholder="blurhash" style={circle} contentFit="cover" transition={150} />
       ) : (
         <Text style={[styles.letter, { fontSize: Math.round(size * 0.42) }]}>
           {name.slice(0, 1).toUpperCase()}
