@@ -55,3 +55,8 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           EXPO_PUBLIC_SUPABASE_ANON_KEY: placeholder
+
+      # Signs up and signs in on that build in headless Chrome (preinstalled on the
+      # runner), tapping each field like a person would, with Supabase mocked.
+      - name: Sign-in screen tests
+        run: npm run test:web

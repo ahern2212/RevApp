@@ -43,6 +43,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
+    "puppeteer-core": "^25.12.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -53,7 +54,8 @@
     "lint": "expo lint",
     "deploy:web": "node scripts/deploy-web.mjs",
     "deploy:web:watch": "node scripts/deploy-web.mjs --watch",
-    "test": "node --experimental-strip-types --no-warnings --test \"tests/**/*.test.mts\""
+    "test": "node --experimental-strip-types --no-warnings --test \"tests/**/*.test.mts\"",
+    "test:web": "node --experimental-strip-types --no-warnings --test \"tests/web/*.e2e.mts\""
   },
   "private": true
 }
