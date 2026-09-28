@@ -134,8 +134,7 @@ export function FeedHeader() {
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
       {width > 0 ? (
         <View
-          pointerEvents="none"
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, styles.passThrough]}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants">
           <SunsetScene width={width} height={height} top={top} />
@@ -200,6 +199,9 @@ export function FeedHeader() {
 }
 
 const styles = StyleSheet.create({
+  passThrough: {
+    pointerEvents: 'none',
+  },
   wrap: {
     backgroundColor: art.skyMid,
     overflow: 'hidden',

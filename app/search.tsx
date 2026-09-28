@@ -155,7 +155,8 @@ export default function SearchScreen() {
                   return (
                     <Animated.View
                       key={driver.id}
-                      entering={FadeInRight.delay(Math.min(index, 6) * 60).springify().damping(16)}>
+                      entering={FadeInRight.delay(Math.min(index, 6) * 60).springify().damping(16)}
+                      style={styles.suggestion}>
                     <PressableScale
                       scaleTo={0.96}
                       onPress={() =>
@@ -165,7 +166,7 @@ export default function SearchScreen() {
                         })
                       }
                       accessibilityRole="link"
-                      style={styles.suggestion}>
+                      style={styles.suggestionLink}>
                       <Avatar name={driver.username} userId={driver.id} size={56} />
                       <Text style={styles.suggestionName} numberOfLines={1}>
                         {driver.username}
@@ -175,6 +176,7 @@ export default function SearchScreen() {
                           ? `${driver.mutuals} you follow ${driver.mutuals === 1 ? 'follows' : 'follow'}`
                           : `${driver.followers} ${driver.followers === 1 ? 'follower' : 'followers'}`}
                       </Text>
+                    </PressableScale>
                       <Pressable
                         onPress={() => followDriver(driver)}
                         disabled={isFollowing}
@@ -185,7 +187,6 @@ export default function SearchScreen() {
                           {isFollowing ? 'Following' : 'Follow'}
                         </Text>
                       </Pressable>
-                    </PressableScale>
                     </Animated.View>
                   );
                 })}
@@ -305,6 +306,10 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: 16,
     padding: 12,
+  },
+  suggestionLink: {
+    alignItems: 'center',
+    gap: 4,
   },
   suggestionName: {
     color: Colors.light.text,

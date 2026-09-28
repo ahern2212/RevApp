@@ -46,7 +46,6 @@ export function NotificationToaster() {
       key={toast.id}
       entering={FadeInUp}
       exiting={FadeOutUp}
-      pointerEvents="box-none"
       style={[styles.wrap, { top: top + 8 }]}>
       <Pressable
         onPress={open}
@@ -68,6 +67,7 @@ export function NotificationToaster() {
 
 const styles = StyleSheet.create({
   wrap: {
+    pointerEvents: 'box-none',
     position: 'absolute',
     left: 12,
     right: 12,

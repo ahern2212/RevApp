@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-import Animated, { FadeInRight } from 'react-native-reanimated';
+import Animated, { css, FadeInRight } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
 import { PressableScale } from '@/components/PressableScale';
@@ -19,6 +19,7 @@ let cleanedUpFor: string | null = null;
 
 function Bubble({
   name,
+  avatarName,
   userId,
   unseen,
   label,
@@ -27,6 +28,8 @@ function Bubble({
   index,
 }: {
   name: string;
+  /** Name for the avatar letter when it differs from the label (e.g. "Your story"). */
+  avatarName?: string;
   userId?: string;
   unseen: boolean;
   label: string;
@@ -43,14 +46,14 @@ function Bubble({
         accessibilityLabel={label}
         scaleTo={0.9}
         style={styles.bubble}>
-        <Animated.View style={[styles.ring, unseen ? styles.ringUnseen : styles.ringSeen]}>
-          <Avatar name={name} userId={userId} size={RING - 8} />
+        <Animated.View style={[styles.ring, unseen ? [styles.ringUnseen, motion.pulse] : styles.ringSeen]}>
+          <Avatar name={avatarName ?? name} userId={userId} size={RING - 8} />
         </Animated.View>
-        {badge}
         <Text style={styles.name} numberOfLines={1}>
           {name}
         </Text>
       </PressableScale>
+      {badge}
     </Animated.View>
   );
 }
@@ -130,6 +133,7 @@ export function StoryTray({ refreshSignal }: { refreshSignal: number }) {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       <Bubble
         name="Your story"
+        avatarName={user.username}
         userId={user.id}
         unseen={!!mine}
         label={mine ? 'View your story' : 'Add to your story'}
@@ -152,6 +156,21 @@ export function StoryTray({ refreshSignal }: { refreshSignal: number }) {
   );
 }
 
+// Unseen stories get a ring that gently pulses (Reanimated CSS keyframes; css.create so it
+// works on the web too).
+const motion = css.create({
+  pulse: {
+    animationName: {
+      '0%': { transform: [{ scale: 1 }] },
+      '50%': { transform: [{ scale: 1.05 }] },
+      '100%': { transform: [{ scale: 1 }] },
+    },
+    animationDuration: 1800,
+    animationIterationCount: 'infinite',
+    animationTimingFunction: 'ease-in-out',
+  },
+});
+
 const styles = StyleSheet.create({
   row: {
     gap: 12,
@@ -171,17 +190,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Unseen stories get a ring that gently pulses (a Reanimated CSS keyframe animation).
   ringUnseen: {
     borderColor: Colors.light.tint,
-    animationName: {
-      '0%': { transform: [{ scale: 1 }] },
-      '50%': { transform: [{ scale: 1.05 }] },
-      '100%': { transform: [{ scale: 1 }] },
-    },
-    animationDuration: 1800,
-    animationIterationCount: 'infinite',
-    animationTimingFunction: 'ease-in-out',
   },
   ringSeen: {
     borderColor: Colors.light.border,

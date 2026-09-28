@@ -358,9 +358,7 @@ export default function FeedScreen() {
         <FeedHeader />
       </Animated.View>
       {newPosts > 0 ? (
-        <Animated.View
-          pointerEvents="box-none"
-          style={[styles.pillWrap, { top: headerHeight + 10 }, pillStyle]}>
+        <Animated.View style={[styles.pillWrap, { top: headerHeight + 10 }, pillStyle]}>
           <Pressable
             onPress={showNewPosts}
             accessibilityRole="button"
@@ -373,10 +371,7 @@ export default function FeedScreen() {
           </Pressable>
         </Animated.View>
       ) : null}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.statusBar, { height: top }, statusBarStyle]}
-      />
+      <Animated.View style={[styles.statusBar, { height: top }, statusBarStyle]} />
       <OptionsSheet
         visible={optionsFor !== null}
         onClose={() => setOptionsFor(null)}
@@ -414,6 +409,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   pillWrap: {
+    pointerEvents: 'box-none',
     position: 'absolute',
     left: 0,
     right: 0,
@@ -443,6 +439,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   statusBar: {
+    pointerEvents: 'none',
     position: 'absolute',
     top: 0,
     left: 0,

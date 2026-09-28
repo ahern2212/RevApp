@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { css } from 'react-native-reanimated';
 
 import { PressableScale } from '@/components/PressableScale';
 import Colors from '@/constants/Colors';
@@ -20,7 +20,7 @@ export function RefreshButton({ refreshing, onPress }: { refreshing: boolean; on
       accessibilityState={{ busy: refreshing }}
       scaleTo={0.9}
       style={styles.button}>
-      <Animated.View style={refreshing ? styles.spinning : null}>
+      <Animated.View style={refreshing ? motion.spinning : null}>
         <Ionicons name="refresh" size={18} color={Colors.light.tint} />
       </Animated.View>
     </PressableScale>
@@ -37,7 +37,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Reanimated CSS keyframe animation: one full turn every 0.8 s while refreshing.
+});
+
+// Reanimated CSS keyframes (css.create, not StyleSheet.create, so they work on the web too).
+const motion = css.create({
+  // One full turn every 0.8 s while refreshing.
   spinning: {
     animationName: {
       from: { transform: [{ rotate: '0deg' }] },

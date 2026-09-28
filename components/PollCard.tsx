@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { css } from 'react-native-reanimated';
 
 import { PressableScale } from '@/components/PressableScale';
 import Colors from '@/constants/Colors';
@@ -68,7 +68,7 @@ export function PollCard({ postId, authorId }: { postId: string; authorId: strin
         showResults ? (
           <View key={option} style={styles.result} accessibilityLabel={`${option}, ${percents[index]} percent`}>
             <Animated.View
-              style={[styles.bar, { width: `${percents[index]}%` }, index === poll.myVote && styles.barMine]}
+              style={[styles.bar, motion.grow, { width: `${percents[index]}%` }, index === poll.myVote && styles.barMine]}
             />
             <Text style={[styles.optionText, index === poll.myVote && styles.optionMine]} numberOfLines={1}>
               {option}
@@ -96,6 +96,20 @@ export function PollCard({ postId, authorId }: { postId: string; authorId: strin
     </View>
   );
 }
+
+// Result bars grow in from the left when they appear (Reanimated CSS keyframes; css.create
+// so they work on the web too).
+const motion = css.create({
+  grow: {
+    transformOrigin: 'left',
+    animationName: {
+      from: { transform: [{ scaleX: 0 }] },
+      to: { transform: [{ scaleX: 1 }] },
+    },
+    animationDuration: 600,
+    animationTimingFunction: 'ease-out',
+  },
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -140,20 +154,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
-  // Grows in from the left when the results appear (a CSS keyframe animation).
   bar: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     left: 0,
     backgroundColor: Colors.light.avatar,
-    transformOrigin: 'left',
-    animationName: {
-      from: { transform: [{ scaleX: 0 }] },
-      to: { transform: [{ scaleX: 1 }] },
-    },
-    animationDuration: 600,
-    animationTimingFunction: 'ease-out',
   },
   barMine: {
     backgroundColor: Colors.light.tint,

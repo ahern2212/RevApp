@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
+import Animated, { css, FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { FeaturedPhoto } from '@/lib/featured';
@@ -35,13 +35,13 @@ export function FeaturedSlideshow({ photos }: { photos: FeaturedPhoto[] }) {
   if (!photo) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <View style={[StyleSheet.absoluteFill, styles.passThrough]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <Animated.View
         key={`${index}-${photo.uri}`}
         entering={FadeIn.duration(FADE_MS)}
         exiting={FadeOut.duration(FADE_MS)}
         style={StyleSheet.absoluteFill}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.zoom]}>
+        <Animated.View style={[StyleSheet.absoluteFill, motion.zoom]}>
           <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
         </Animated.View>
       </Animated.View>
@@ -62,8 +62,9 @@ export function FeaturedSlideshow({ photos }: { photos: FeaturedPhoto[] }) {
   );
 }
 
-const styles = StyleSheet.create({
-  // Slow "Ken Burns" push-in over each slide's lifetime.
+// Slow "Ken Burns" push-in over each slide's lifetime (Reanimated CSS keyframes; css.create
+// so it works on the web too).
+const motion = css.create({
   zoom: {
     animationName: {
       from: { transform: [{ scale: 1 }] },
@@ -72,6 +73,12 @@ const styles = StyleSheet.create({
     animationDuration: SLIDE_MS + FADE_MS,
     animationTimingFunction: 'linear',
     animationFillMode: 'forwards',
+  },
+});
+
+const styles = StyleSheet.create({
+  passThrough: {
+    pointerEvents: 'none',
   },
   shade: {
     ...StyleSheet.absoluteFill,

@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { css } from 'react-native-reanimated';
 
 import { Avatar } from '@/components/Avatar';
 import { FollowStats } from '@/components/FollowStats';
@@ -142,7 +143,7 @@ export default function UserProfileScreen() {
                 disabled={busy}
                 accessibilityRole="button"
                 accessibilityState={{ selected: rel.following, busy }}
-                style={[styles.follow, rel.following && styles.following]}>
+                style={[styles.follow, motion.fade, rel.following && styles.following]}>
                 <Ionicons
                   name={rel.following ? 'checkmark' : 'person-add-outline'}
                   size={16}
@@ -201,6 +202,15 @@ export default function UserProfileScreen() {
   );
 }
 
+// Eases between the filled "Follow" and the glass "Following" look (a Reanimated CSS
+// transition; css.create so it works on the web too).
+const motion = css.create({
+  fade: {
+    transitionProperty: ['backgroundColor', 'borderColor'],
+    transitionDuration: 220,
+  },
+});
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -256,9 +266,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.tint,
     borderRadius: 12,
     paddingVertical: 10,
-    // Eases between the filled "Follow" and the glass "Following" look.
-    transitionProperty: ['backgroundColor', 'borderColor'],
-    transitionDuration: 220,
   },
   following: {
     ...glass,

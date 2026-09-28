@@ -120,14 +120,17 @@ export function PostCard({
   return (
     <Animated.View entering={FadeInDown.duration(350)} style={styles.card}>
       <View style={styles.header}>
-        <Pressable
-          onPress={onAuthorPress}
-          style={styles.author}
-          accessibilityRole="link"
-          accessibilityLabel={`View ${post.authorName}'s profile`}>
-          <Avatar name={post.authorName} userId={post.authorId} size={36} />
+        <View style={styles.author}>
+          <Pressable
+            onPress={onAuthorPress}
+            accessibilityRole="link"
+            accessibilityLabel={`View ${post.authorName}'s profile`}>
+            <Avatar name={post.authorName} userId={post.authorId} size={36} />
+          </Pressable>
           <View style={styles.authorText}>
-            <Text style={styles.username}>{post.authorName}</Text>
+            <Text style={styles.username} onPress={onAuthorPress}>
+              {post.authorName}
+            </Text>
             <Text style={styles.meta} numberOfLines={1}>
               {post.car && onCarPress ? (
                 <Text style={styles.carLink} onPress={onCarPress} accessibilityRole="link">
@@ -140,7 +143,7 @@ export function PostCard({
               {timeAgo(post.createdAt)}
             </Text>
           </View>
-        </Pressable>
+        </View>
         {onOptions ? (
           <Pressable
             onPress={onOptions}
@@ -175,7 +178,7 @@ export function PostCard({
             transition={200}
           />
         )}
-        <Animated.View pointerEvents="none" style={[styles.burst, burstStyle]}>
+        <Animated.View style={[styles.burst, burstStyle]}>
           <Ionicons name="heart" size={96} color="#ffffff" style={styles.burstIcon} />
         </Animated.View>
       </Pressable>
@@ -309,6 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.imagePlaceholder,
   },
   burst: {
+    pointerEvents: 'none',
     position: 'absolute',
     top: 0,
     right: 0,

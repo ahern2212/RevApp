@@ -82,12 +82,12 @@ export function MediaCarousel({ uris, style, onIndexChange }: Props) {
           <Ionicons name="chevron-forward" size={18} color="#ffffff" />
         </Pressable>
       ) : null}
-      <View style={styles.counter} pointerEvents="none">
+      <View style={styles.counter}>
         <Text style={styles.counterText}>
           {index + 1}/{uris.length}
         </Text>
       </View>
-      <View style={styles.dots} pointerEvents="none">
+      <View style={styles.dots}>
         {uris.map((uri, i) => (
           <View key={uri} style={[styles.dot, i === index && styles.dotActive]} />
         ))}
@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     right: 10,
   },
   counter: {
+    pointerEvents: 'none',
     position: 'absolute',
     top: 12,
     right: 12,
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   dots: {
+    pointerEvents: 'none',
     position: 'absolute',
     bottom: 10,
     left: 0,

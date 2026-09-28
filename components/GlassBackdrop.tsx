@@ -14,7 +14,7 @@ const GLOWS = [
 /** Full-screen theme-colored background for glass UI. Place it first inside a screen. */
 export function GlassBackdrop() {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
       <Svg width="100%" height="100%">
         <Defs>
           {GLOWS.map((glow) => (
