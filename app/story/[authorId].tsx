@@ -4,7 +4,18 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -20,7 +31,8 @@ import { OptionsSheet, type SheetOption } from '@/components/OptionsSheet';
 import { confirmBlock, useReportSheet } from '@/components/SafetyActions';
 import { useGarage } from '@/context/GarageContext';
 import { useProfile } from '@/context/ProfilesContext';
-import { confirm, showError } from '@/lib/confirm';
+import { confirm, showError, showNotice } from '@/lib/confirm';
+import { MESSAGE_MAX, sendMessage, startConversation } from '@/lib/messages';
 import {
   deleteStory,
   fetchStories,
@@ -130,6 +142,9 @@ export default function StoryScreen() {
   const [viewers, setViewers] = useState<{ storyId: string; list: StoryViewer[] } | null>(null);
   const [viewersOpen, setViewersOpen] = useState(false);
   const [menu, setMenu] = useState<SheetOption[] | null>(null);
+  const [reply, setReply] = useState('');
+  const [replying, setReplying] = useState(false);
+  const [sendingReply, setSendingReply] = useState(false);
   const progress = useSharedValue(0);
   const isMine = user?.id === authorId;
   const username = author?.username ?? name ?? 'driver';
@@ -175,6 +190,24 @@ export default function StoryScreen() {
   }, [storyId, isMine]);
 
   const { openReport, reportSheet } = useReportSheet(close);
+
+  // Replying to a story sends the author a direct message, like Instagram.
+  const sendReply = async () => {
+    const text = reply.trim();
+    if (!text || sendingReply) return;
+    setSendingReply(true);
+    try {
+      const conversationId = await startConversation(authorId);
+      await sendMessage(conversationId, `Replied to your story: ${text}`);
+      setReply('');
+      setReplying(false);
+      showNotice('Sent', `Your reply is in your chat with @${username}.`);
+    } catch (error) {
+      showError('Could not send', error);
+    } finally {
+      setSendingReply(false);
+    }
+  };
 
   const remove = async () => {
     if (!story || !stories) return;
@@ -229,7 +262,7 @@ export default function StoryScreen() {
     );
   }
 
-  const paused = viewersOpen || menu !== null;
+  const paused = viewersOpen || menu !== null || replying;
   const viewerList = viewers?.storyId === story.id ? viewers.list : null;
   const Slide = story.videoUri ? VideoSlide : PhotoSlide;
 
@@ -280,6 +313,43 @@ export default function StoryScreen() {
             {viewerList ? `Seen by ${viewerList.length}` : 'Seen by …'}
           </Text>
         </Pressable>
+      ) : null}
+
+      {!isMine ? (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.replyWrap}
+          pointerEvents="box-none">
+          <View style={[styles.replyBar, { paddingBottom: bottom + 10 }]}>
+            <TextInput
+              value={reply}
+              onChangeText={setReply}
+              onFocus={() => setReplying(true)}
+              onBlur={() => setReplying(false)}
+              placeholder={`Reply to @${username}…`}
+              placeholderTextColor="rgba(255, 255, 255, 0.7)"
+              maxLength={MESSAGE_MAX - 40}
+              returnKeyType="send"
+              onSubmitEditing={sendReply}
+              accessibilityLabel={`Reply to ${username}'s story`}
+              style={styles.replyInput}
+            />
+            {reply.trim() ? (
+              <Pressable
+                onPress={sendReply}
+                disabled={sendingReply}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Send reply">
+                {sendingReply ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Ionicons name="paper-plane" size={24} color="#ffffff" />
+                )}
+              </Pressable>
+            ) : null}
+          </View>
+        </KeyboardAvoidingView>
       ) : null}
 
       <Modal visible={viewersOpen} transparent animationType="slide" onRequestClose={() => setViewersOpen(false)}>
@@ -403,6 +473,29 @@ const styles = StyleSheet.create({
   seenText: {
     color: '#ffffff',
     fontWeight: '700',
+  },
+  replyWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+  },
+  replyInput: {
+    flex: 1,
+    color: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
   },
   backdrop: {
     flex: 1,
